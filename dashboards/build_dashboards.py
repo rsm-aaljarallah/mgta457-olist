@@ -328,7 +328,7 @@ local = dashboard(["metrics", "states"], [("Where local sellers would help", [
     place(filter_widget("l_f_region", "Customer region", "filter-multi-select",
                         [("metrics", "customer_region"), ("states", "region")]), 0, 1, 2, 1),
     place(filter_widget("l_f_state", "Customer state", "filter-multi-select",
-                        [("metrics", "customer_state"), ("states", "state")]), 2, 1, 2, 1),
+                        [("metrics", "customer_state")]), 2, 1, 2, 1),
     place(filter_widget("l_f_cat", "Product category", "filter-multi-select",
                         [("metrics", "category")]), 4, 1, 2, 1),
     place(scatter("l_scatter", "States: orders per 100,000 residents vs broken-promise rate", "states",
@@ -338,7 +338,7 @@ local = dashboard(["metrics", "states"], [("Where local sellers would help", [
                    ("pct_orders_from_other_state", "% of orders from another state")],
                   description="Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter "
                               "of its sellers per resident and gets 91.5% of its orders from another state. "
-                              "Population: IBGE 2018. The category filter does not apply here."), 0, 2, 3, 9),
+                              "Population: IBGE 2018. The state and category filters do not apply here."), 0, 2, 3, 9),
     place(chart("l_rate", "bar", "Local vs Sao Paulo sellers: broken-promise rate", "metrics", "seller_location",
                 "Seller", "categorical", [("broken_rate", "Broken-promise rate")], "Broken-promise rate", PCT,
                 description="Pick one customer state above. For Rio: local sellers 7.7% (+/- 1.7), "

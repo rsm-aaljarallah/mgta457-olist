@@ -125,23 +125,6 @@
                     }
                   ]
                 }
-              },
-              {
-                "name": "filter_l_f_state_states_state",
-                "query": {
-                  "datasetName": "states",
-                  "disaggregated": false,
-                  "fields": [
-                    {
-                      "name": "state",
-                      "expression": "`state`"
-                    },
-                    {
-                      "name": "state_associativity",
-                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
-                    }
-                  ]
-                }
               }
             ],
             "spec": {
@@ -153,11 +136,6 @@
                     "fieldName": "customer_state",
                     "displayName": "customer_state",
                     "queryName": "filter_l_f_state_metrics_customer_state"
-                  },
-                  {
-                    "fieldName": "state",
-                    "displayName": "state",
-                    "queryName": "filter_l_f_state_states_state"
                   }
                 ]
               },
@@ -309,7 +287,7 @@
                 "showTitle": true,
                 "title": "States: orders per 100,000 residents vs broken-promise rate",
                 "showDescription": true,
-                "description": "Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter of its sellers per resident and gets 91.5% of its orders from another state. Population: IBGE 2018. The category filter does not apply here."
+                "description": "Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter of its sellers per resident and gets 91.5% of its orders from another state. Population: IBGE 2018. The state and category filters do not apply here."
               }
             }
           },

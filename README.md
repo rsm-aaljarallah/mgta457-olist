@@ -1,6 +1,17 @@
 # MGTA 457 team project: Olist marketplace
 
-**Status, 2026-11-24: the data layer is built.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 21 pipeline checks pass, and 36 of the 39 headline numbers of the design document come back exactly from Gold (the other three are in "Numbers that moved" below). The three dashboards are published. Nothing here is committed or pushed yet.
+**Status, 2026-11-24: ready to submit.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 21 pipeline checks pass, and all 39 headline numbers of the design document come back exactly from Gold. The three dashboards are published, and the design document, final documentation and presentation are in `deliverables/`.
+
+## What we submit
+
+| Deliverable (syllabus) | File or place |
+| --- | --- |
+| Dashboard design document, 2 to 5 pages with sketches and user flow | `deliverables/olist_design_document.docx` (5 pages), source `docs/design_doc.md` |
+| Databricks lakehouse: curated Unity Catalog tables | catalog `olist` (schemas `raw` and `analytics`), see "In Databricks" below |
+| SQL workflow, the transformation layer | `sql/00_setup.sql` to `sql/07_dashboard_views.sql` |
+| Final project documentation | `deliverables/olist_final_documentation.docx`: overview, lineage, metric dictionary, data dictionary, data quality log, AI usage log |
+| Dashboard files: 3 dashboards, 4 pages, 19 visuals | `dashboards/*.lvdash.json`, published in Databricks AI/BI (accepted by the professor in place of Power BI) |
+| Final presentation, 10 to 15 minutes | `deliverables/olist_presentation.pptx` (11 slides, speaker notes), outline in `docs/presentation_outline.md` |
 
 ## The data
 
@@ -28,11 +39,20 @@ What `olist.analytics` holds:
 | Silver (`03_silver.sql`) | `silver_orders`, `silver_order_items`, `silver_order_payments`, `silver_order_reviews`, `silver_customers`, `silver_sellers`, `silver_products`, `silver_geolocation`, `silver_leads`, `silver_closed_deals`, `silver_states`; `quarantine` (every row set aside, with its reason); the `stg_` views that hold the rules |
 | Gold (`04_gold.sql`) | `fact_orders` (one row per order), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures) |
 | Metric view (`05_metric_view.sql`) | `delivery_metrics`: every rate the dashboards show, recalculated for any filter |
+| Dashboard views (`07_dashboard_views.sql`) | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` |
 | Checks (`06_checks.sql`) | `pipeline_checks` (every row should say PASS), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's numbers recomputed from Gold) |
 
-## Design document
+## Documents and how they are built
 
-`docs/design_doc.md` is the source; `deliverables/olist_design_document.docx` is its Word export (5 pages). The sketches come from `docs/dashboard_plan.json`: run `python3 tools/draw_sketches.py docs/dashboard_plan.json`, then `tools/export_word.py` (command at the top of that file).
+The Word and PowerPoint files are built from the markdown and scripts in this repository. Edit the source, then rebuild; never edit the Office files by hand.
+
+| Output | Source | Command (from the repo root) |
+| --- | --- | --- |
+| `deliverables/olist_design_document.docx` | `docs/design_doc.md`, sketches from `docs/dashboard_plan.json` | `python3 tools/draw_sketches.py docs/dashboard_plan.json`, then the first command at the top of `tools/export_word.py` |
+| `deliverables/olist_final_documentation.docx` | `docs/project_overview.md`, `lineage.md`, `metric_dictionary.md`, `data_dictionary.md`, `data_quality_log.md`, `ai_usage.md` | `python3 tools/build_data_dictionary.py` and `python3 tools/draw_lineage.py`, then `python3 tools/export_word.py deliverables/olist_final_documentation.docx "Olist Delivery Promise: Final Project Documentation" "MGTA 457 Business Intelligence Systems, Fall 2026. Team: AJ, Ruby, Merna." docs/project_overview.md docs/lineage.md docs/metric_dictionary.md docs/data_dictionary.md docs/data_quality_log.md docs/ai_usage.md` |
+| `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=/Users/aj/Documents/BI/tools/deck/node_modules node tools/deck/build_deck.js` |
+
+The dashboard screenshots in `docs/img/dash_*.png` were taken from the published dashboards on 2026-11-24.
 
 ## How to run it
 
@@ -61,19 +81,13 @@ Published in the Databricks workspace on 2026-11-24 and checked page by page in 
 
 They read only the metric view `delivery_metrics` and the views of `07_dashboard_views.sql`, so they do no calculation. Published dashboards show cached results until someone clicks refresh.
 
-## Numbers that moved since the design document
+## Design document numbers
 
-`design_doc_numbers` compares the 39 numbers printed in the design document of 2026-11-19 with Gold. Three differ slightly, and none changes a conclusion:
+`design_doc_numbers` recomputes the 39 headline numbers of the design document from Gold; all 39 match. Three were corrected on 2026-11-24, when the Gold build replaced the planning queries: the excess of the next nine routes (629 to 637), the median month's rate (6.85% to 6.89%) and the busy months' share of orders (22.2% to 22.1%). No conclusion changed.
 
-| Number | Design document | Gold |
-| --- | --- | --- |
-| Excess broken promises of the next nine routes, together | 629 | 637 (Sao Paulo to Rio, 678, is still larger) |
-| Median month's broken-promise rate | 6.85% | 6.89% (the same three busy months) |
-| Busy months' share of orders | 22.2% | 22.1% |
+## What the profile found
 
-## What we found so far
-
-The profile shows real work for Silver, all written up in [docs/data_quality_log.md](docs/data_quality_log.md):
+All written up in [docs/data_quality_log.md](docs/data_quality_log.md):
 
 - **Repeated rows.** 261,831 exact duplicate location rows.
 - **Repeated reviews.** One review attached to several orders, and 547 orders with more than one review.

@@ -2,7 +2,7 @@
 
 MGTA 457 Business Intelligence Systems, Fall 2026. Team: AJ, Ruby, Merna.
 
-Version of 2026-11-19. The data checks ran in Databricks. The other numbers come from planning queries on the same raw files, which our Gold tables will reproduce.
+Version of 2026-11-24. Every number here is recomputed from our Gold tables in Databricks.
 
 ## The question
 
@@ -24,7 +24,7 @@ We combine three datasets from two publishers: the Olist marketplace data (99,44
 - **A definition that changes the answer.** The promised date has no time of day, so comparing timestamps calls 1,292 deliveries late that arrived on the promised day. We compare days.
 - **A window that ends early.** Deliveries stop being recorded after August 2018: 8,314 that month, 56 in September, 3 in October. We judge a promise only once its day has passed inside the data, so we keep orders bought from January 2017 and promised by August 31, 2018: 95,901 orders, not counting canceled or unavailable ones.
 
-Silver will apply 31 rules, each with its reason in the data quality log, and set aside the rows it cannot trust in a quarantine table. Gold is a star schema. `fact_orders` has one row per order: its promise, delivery, outcome, latest review, and its route when one seller shipped the whole order. `fact_order_items` has one row per item, with its seller, product and the seller's deadline to hand it to the carrier. They share the dimensions date, state (with the IBGE region and population), seller (with the funnel channel for sellers who came through it) and product (with the English category). A metric view holds the rates, so a filter recalculates a rate instead of reading a stored one. The dashboards read only Gold tables and metric views.
+Silver applies 31 rules, each with its reason in the data quality log, and sets aside the rows it cannot trust in a quarantine table. Gold is a star schema. `fact_orders` has one row per order: its promise, delivery, outcome, latest review, and its route when one seller shipped the whole order. `fact_order_items` has one row per item, with its seller, product and the seller's deadline to hand it to the carrier. They share the dimensions date, state (with the IBGE region and population), seller (with the funnel channel for sellers who came through it) and product (with the English category). A metric view holds the rates, so a filter recalculates a rate instead of reading a stored one. The dashboards read only Gold tables and metric views.
 
 ## Metric definitions
 
@@ -38,7 +38,7 @@ Silver will apply 31 rules, each with its reason in the data quality log, and se
 | Route | Seller state to customer state, for orders shipped by a single seller |
 | Excess broken promises | A route's broken promises minus what the national rate (8.7% on single-seller orders) predicts for its number of orders |
 | Margin of error | The 95% interval of a rate, shown as plus or minus percentage points |
-| Busy month | A month whose national broken-promise rate is at least twice the median month (6.85%) |
+| Busy month | A month whose national broken-promise rate is at least twice the median month (6.89%) |
 | Fix type | Lasting fix when the route's rate outside busy months, minus its margin, is above the national 6.4%; busy-season plan when its excess in busy months is larger than in the other months; both when both hold |
 | Orders per 100,000 residents | A state's orders divided by its 2018 IBGE population |
 | Local seller | A seller in the same state as the customer |
@@ -51,9 +51,9 @@ This page is for the Head of Customer Experience. Three cards open it. 8.6% of o
 
 ## Dashboard 2: Where promises break
 
-This page is for the Head of Logistics, and it ends in a ranked list. The table (1) ranks routes by their excess broken promises. Sao Paulo to Rio de Janeiro comes first: 8,071 orders, 17.1% broken (plus or minus 0.8 points), 678 above what the national rate predicts. That is more than the next nine routes together (629). Five of the top ten go into the Northeast and two into Rio, while Sao Paulo to Minas Gerais, the other big route, does better than the national rate (6.7%). Each route also gets a fix type from a rule in SQL. Sao Paulo to Rio needs both a lasting fix and a busy-season plan. Sao Paulo to Bahia, Pernambuco and Piaui need a lasting fix. Parana to Rio and Sao Paulo to Santa Catarina need a busy-season plan.
+This page is for the Head of Logistics, and it ends in a ranked list. The table (1) ranks routes by their excess broken promises. Sao Paulo to Rio de Janeiro comes first: 8,071 orders, 17.1% broken (plus or minus 0.8 points), 678 above what the national rate predicts. That is more than the next nine routes together (637). Five of the top ten go into the Northeast and two into Rio, while Sao Paulo to Minas Gerais, the other big route, does better than the national rate (6.7%). Each route also gets a fix type from a rule in SQL. Sao Paulo to Rio needs both a lasting fix and a busy-season plan. Sao Paulo to Bahia, Pernambuco and Piaui need a lasting fix. Parana to Rio and Sao Paulo to Santa Catarina need a busy-season plan.
 
-The line chart (2) shows why there are two kinds of fix. The Northeast breaks promises in ordinary months too: 11.7% in 2017 and 13.2% in 2018, against 4.8% and 5.1% for the Southeast without Rio. Three months are different. In November 2017, February 2018 and March 2018 the national rate was 14.0%, 15.0% and 20.8%. Those months hold 22.2% of orders but 42.9% of broken promises. Rio reached 33.4%, and the promised dates were about as long as in other months. The bar chart (3) tests the obvious idea of simply promising later dates. Only 22.7% of broken promises missed by one to three days, so a promise three days later would bring the rate from 8.6% down to just 6.6%. In the Northeast, where a late order typically arrives 8 days late, it would rescue fewer than 1 in 5. The last chart (4) shows where the days go: 72.2% of late deliveries were handed to the carrier by the seller's deadline, so most of the delay happens after the handover.
+The line chart (2) shows why there are two kinds of fix. The Northeast breaks promises in ordinary months too: 11.7% in 2017 and 13.2% in 2018, against 4.8% and 5.1% for the Southeast without Rio. Three months are different. In November 2017, February 2018 and March 2018 the national rate was 14.0%, 15.0% and 20.8%. Those months hold 22.1% of orders but 42.9% of broken promises. Rio reached 33.4%, and the promised dates were about as long as in other months. The bar chart (3) tests the obvious idea of simply promising later dates. Only 22.7% of broken promises missed by one to three days, so a promise three days later would bring the rate from 8.6% down to just 6.6%. In the Northeast, where a late order typically arrives 8 days late, it would rescue fewer than 1 in 5. The last chart (4) shows where the days go: 72.2% of late deliveries were handed to the carrier by the seller's deadline, so most of the delay happens after the handover.
 
 ![Dashboard 2, page 1, Where promises break: layout sketch](img/sketch_2_where_promises_break.png "width=4.8")
 
@@ -69,13 +69,13 @@ This page is for the Head of Seller Acquisition. The scatter plot (1) puts each 
 
 ## Why these charts
 
-We kept to five chart types and gave each one job. A card shows a single headline number. Bars compare groups: score by days late, regions, local and distant sellers. A line shows rates moving over months. The scatter puts two measures of the same state against each other. A table carries the ranked routes, because a logistics lead needs names and reasons, not shapes. Broken promises have one color on every page, and every rate with a margin of error shows it. The three dashboards hold 16 visuals in all, against the syllabus minimum of three dashboards and six visuals. The figures are layout sketches drawn from our dashboard plan, and their numbers match the text.
+We kept to five chart types and gave each one job. A card shows a single headline number. Bars compare groups: score by days late, regions, local and distant sellers. A line shows rates moving over months. The scatter puts two measures of the same state against each other. A table carries the ranked routes, because a logistics lead needs names and reasons, not shapes. Broken promises have one color on every page, and every rate with a margin of error shows it. The built dashboards hold 19 visuals (16 in these sketches), against the syllabus minimum of three dashboards and six visuals. The figures are layout sketches drawn from our dashboard plan, and their numbers match the text.
 
 ## User flow and filters
 
 ![Intended user flow](img/user_flow.png "width=5.4")
 
-Each reader has a starting point. The Head of Customer Experience opens Dashboard 1 to see how much of the bad-review pile follows a broken promise, and moves to Dashboard 2 when the share is high. The Head of Logistics starts on Dashboard 2, reads the routes table from the top, and sees for each route whether it needs a lasting fix, a busy-season plan, or both. The Head of Seller Acquisition starts on Dashboard 3, picks a state with few nearby sellers, and checks whether the funnel recruits there. Anyone can open "Can we trust it". All three dashboards have a customer-region filter. Dashboards 1 and 2 add the purchase month, Dashboard 2 the seller state, and Dashboards 1 and 3 the product category. The fix type ignores the month filter, because it compares the busy months with the rest of the year.
+Each reader has a starting point. The Head of Customer Experience opens Dashboard 1 to see how much of the bad-review pile follows a broken promise, and moves to Dashboard 2 when the share is high. The Head of Logistics starts on Dashboard 2, reads the routes table from the top, and sees for each route whether it needs a lasting fix, a busy-season plan, or both. The Head of Seller Acquisition starts on Dashboard 3, picks a state with few nearby sellers, and checks whether the funnel recruits there. Anyone can open "Can we trust it". All three dashboards have a customer-region filter. Dashboards 1 and 2 add the purchase month, Dashboard 2 the seller state, Dashboard 3 the customer state, and Dashboards 1 and 3 the product category. The fix type ignores the month filter, because it compares the busy months with the rest of the year.
 
 ## What the data can and cannot say
 
@@ -87,4 +87,4 @@ Region and state describe where the problem is. They never rank a seller. Custom
 
 ## What comes next
 
-Following the professor's Silver steps, we inspected every table, stated its grain and key, measured how a join on the wrong grain inflates rows, and drafted 31 rules and seven assumptions, each with its reason. Next, the team confirms the rules, then we build Silver, Gold, the metric view, the checks and the dashboards before the code freeze on December 3.
+Silver, Gold, the metric view, the checks and the three dashboards are built in Databricks, and all 21 pipeline checks pass. Before the code freeze on December 3, the team confirms the open choices in the data quality log.

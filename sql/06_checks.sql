@@ -278,7 +278,7 @@ SELECT * FROM olist.analytics.silver_rule_counts ORDER BY rule_no;
 -- ------------------------------------------------------------
 -- 3. Design document numbers, recomputed from Gold.
 --    doc_value is the number as printed in docs/design_doc.md
---    (2026-11-19). gold_value is today's build, rounded the same
+--    (2026-11-24). gold_value is today's build, rounded the same
 --    way. MATCH means they agree; DIFFERS lists a number the doc
 --    should be updated to (the conclusion is unchanged; see note).
 -- ------------------------------------------------------------
@@ -341,17 +341,17 @@ v AS (
   UNION ALL SELECT 'Top route: broken rate and margin', '17.1% +/- 0.8', concat(ROUND(100 * broken_rate, 1), '% +/- ', ROUND(100 * margin, 1)) FROM route1
   UNION ALL SELECT 'Top route: excess broken promises', '678', format_number(excess_broken, 0) FROM route1
   UNION ALL SELECT 'Top route: fix type', 'Both', fix_type FROM route1
-  UNION ALL SELECT 'Next nine routes: excess together', '629',
+  UNION ALL SELECT 'Next nine routes: excess together', '637',
     (SELECT format_number(SUM(excess_broken), 0) FROM olist.analytics.gold_routes WHERE excess_rank BETWEEN 2 AND 10)
   UNION ALL SELECT 'National rate, single-seller orders', '8.7%', concat(ROUND(100 * national_rate, 1), '%') FROM route1
   UNION ALL SELECT 'National rate outside busy months, single-seller', '6.4%', concat(ROUND(100 * national_rate_other, 1), '%') FROM route1
   UNION ALL SELECT 'Fix types named in the doc', 'BA, PE, PI lasting; PR > RJ, SP > SC busy-season',
     (SELECT concat_ws('; ', collect_list(concat(route, ' ', fix_type))) FROM olist.analytics.gold_routes
       WHERE route IN ('SP > BA', 'SP > PE', 'SP > PI', 'PR > RJ', 'SP > SC'))
-  UNION ALL SELECT 'Median month', '6.85%', concat(ROUND(100 * median_rate, 2), '%') FROM months
+  UNION ALL SELECT 'Median month', '6.89%', concat(ROUND(100 * median_rate, 2), '%') FROM months
   UNION ALL SELECT 'Busy months', 'Nov 2017, Feb 2018, Mar 2018',
     (SELECT concat_ws(', ', sort_array(collect_list(date_format(month_start, 'yyyy-MM')))) FROM olist.analytics.gold_months WHERE is_busy_month)
-  UNION ALL SELECT 'Busy months: share of orders', '22.2%', concat(ROUND(100 * busy_orders, 1), '%') FROM months
+  UNION ALL SELECT 'Busy months: share of orders', '22.1%', concat(ROUND(100 * busy_orders, 1), '%') FROM months
   UNION ALL SELECT 'Busy months: share of broken promises', '42.9%', concat(ROUND(100 * busy_broken, 1), '%') FROM months
   UNION ALL SELECT 'Northeast, outside busy months, 2017 / 2018', '11.7% / 13.2%',
     (SELECT concat(ROUND(100 * MAX(CASE WHEN purchase_year = 2017 THEN rate END), 1), '% / ',
