@@ -1,0 +1,14 @@
+# Data files never go in this repository (see docs/sources.md)
+*.csv
+*.zip
+olist_data/
+
+# Local clutter
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Secrets
+.env
+.databrickscfg

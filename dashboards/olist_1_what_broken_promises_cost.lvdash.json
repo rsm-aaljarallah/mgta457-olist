@@ -1,0 +1,492 @@
+{
+  "datasets": [
+    {
+      "name": "metrics",
+      "displayName": "delivery_metrics",
+      "asset_name": "olist.analytics.delivery_metrics"
+    }
+  ],
+  "pages": [
+    {
+      "name": "page1",
+      "displayName": "What broken promises cost",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "c_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# What broken promises cost\n",
+                "For the Head of Customer Experience: how much of the bad-review pile follows a broken promise, and when those reviews are written. A promise is broken when the order was not delivered by the end of the promised day."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_f_month",
+            "queries": [
+              {
+                "name": "filter_c_f_month_metrics_purchase_month",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "purchase_month",
+                      "expression": "`purchase_month`"
+                    },
+                    {
+                      "name": "purchase_month_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "purchase_month",
+                    "displayName": "purchase_month",
+                    "queryName": "filter_c_f_month_metrics_purchase_month"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Purchase month"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c_f_region",
+            "queries": [
+              {
+                "name": "filter_c_f_region_metrics_customer_region",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "customer_region",
+                      "expression": "`customer_region`"
+                    },
+                    {
+                      "name": "customer_region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "customer_region",
+                    "displayName": "customer_region",
+                    "queryName": "filter_c_f_region_metrics_customer_region"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Customer region"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c_f_cat",
+            "queries": [
+              {
+                "name": "filter_c_f_cat_metrics_category",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "category_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "category",
+                    "displayName": "category",
+                    "queryName": "filter_c_f_cat_metrics_category"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Product category"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "c_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(broken_rate)",
+                      "expression": "MEASURE(`broken_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(broken_rate)",
+                  "displayName": "Orders with a broken promise",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Orders with a broken promise",
+                "showDescription": true,
+                "description": "Of judged orders"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_low",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_low_reviews_after_broken_promise)",
+                      "expression": "MEASURE(`share_low_reviews_after_broken_promise`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_low_reviews_after_broken_promise)",
+                  "displayName": "1-2 star reviews that follow a broken promise",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "1-2 star reviews that follow a broken promise",
+                "showDescription": true,
+                "description": "Of all 1-2 star reviews"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_before",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_late_reviewed_before_arrival)",
+                      "expression": "MEASURE(`share_late_reviewed_before_arrival`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_late_reviewed_before_arrival)",
+                  "displayName": "Late orders reviewed before they arrived",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Late orders reviewed before they arrived",
+                "showDescription": true,
+                "description": "1.65 stars, against 3.72 after"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 3,
+            "width": 2,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "c_bucket",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "promise_bucket_label",
+                      "expression": "`promise_bucket_label`"
+                    },
+                    {
+                      "name": "measure(avg_review_score)",
+                      "expression": "MEASURE(`avg_review_score`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "promise_bucket_label",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Delivered, compared with the promised day",
+                  "axis": {
+                    "title": "Delivered, compared with the promised day"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Average review score"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "fieldName": "measure(avg_review_score)",
+                  "displayName": "Average review score"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Review score by days before or after the promised day",
+                "showDescription": true,
+                "description": "The score holds while orders arrive early, then falls right after the promised day."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "c_band",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "delivery_time_band",
+                      "expression": "`delivery_time_band`"
+                    },
+                    {
+                      "name": "measure(avg_score_kept)",
+                      "expression": "MEASURE(`avg_score_kept`)"
+                    },
+                    {
+                      "name": "measure(avg_score_broken)",
+                      "expression": "MEASURE(`avg_score_broken`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "delivery_time_band",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Days from purchase to delivery",
+                  "axis": {
+                    "title": "Days from purchase to delivery"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Average review score"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(avg_score_kept)",
+                      "displayName": "Promise kept"
+                    },
+                    {
+                      "fieldName": "measure(avg_score_broken)",
+                      "displayName": "Promise broken"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "On time vs late, same delivery time",
+                "showDescription": true,
+                "description": "Orders that took the same time to arrive: late ones score lower in every band, so the score follows the promise, not only the speed."
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 6,
+            "width": 3,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "c_note",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**Read with care.** Every link between promises and reviews is a correlation. The cheap test it points to: a delay notice with a new date, sent before the review survey to customers whose parcel will miss. A promise is judged when the order was bought from January 2017 and promised by August 31, 2018, and was not canceled. Each order counts its latest review once. Source: `olist.analytics.delivery_metrics`."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 6,
+            "height": 2
+          }
+        }
+      ]
+    }
+  ]
+}

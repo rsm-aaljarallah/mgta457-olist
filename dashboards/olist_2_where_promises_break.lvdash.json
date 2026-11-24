@@ -1,0 +1,1375 @@
+{
+  "datasets": [
+    {
+      "name": "metrics",
+      "displayName": "delivery_metrics",
+      "asset_name": "olist.analytics.delivery_metrics"
+    },
+    {
+      "name": "routes",
+      "displayName": "routes",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.route_list ORDER BY excess_rank"
+      ]
+    },
+    {
+      "name": "checks",
+      "displayName": "checks",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.pipeline_checks ORDER BY check_no"
+      ]
+    },
+    {
+      "name": "rules",
+      "displayName": "rules",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.silver_rule_counts ORDER BY rule_no"
+      ]
+    },
+    {
+      "name": "quarantine",
+      "displayName": "quarantine",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.quarantine_summary"
+      ]
+    },
+    {
+      "name": "deliveries",
+      "displayName": "deliveries",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.deliveries_per_month ORDER BY delivery_month"
+      ]
+    },
+    {
+      "name": "fairness",
+      "displayName": "fairness",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.region_fairness ORDER BY broken_pct DESC"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "page1",
+      "displayName": "Where promises break",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "w_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Where promises break\n",
+                "For the Head of Logistics: which routes to fix first, and whether each needs a lasting fix, a busy-season plan, or both. A route is seller state > customer state, for orders shipped by one seller."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "w_f_month",
+            "queries": [
+              {
+                "name": "filter_w_f_month_metrics_purchase_month",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "purchase_month",
+                      "expression": "`purchase_month`"
+                    },
+                    {
+                      "name": "purchase_month_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-date-range-picker",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "purchase_month",
+                    "displayName": "purchase_month",
+                    "queryName": "filter_w_f_month_metrics_purchase_month"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Purchase month"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "w_f_seller",
+            "queries": [
+              {
+                "name": "filter_w_f_seller_metrics_seller_state",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "seller_state",
+                      "expression": "`seller_state`"
+                    },
+                    {
+                      "name": "seller_state_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_w_f_seller_routes_seller_state",
+                "query": {
+                  "datasetName": "routes",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "seller_state",
+                      "expression": "`seller_state`"
+                    },
+                    {
+                      "name": "seller_state_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "seller_state",
+                    "displayName": "seller_state",
+                    "queryName": "filter_w_f_seller_metrics_seller_state"
+                  },
+                  {
+                    "fieldName": "seller_state",
+                    "displayName": "seller_state",
+                    "queryName": "filter_w_f_seller_routes_seller_state"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Seller state"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "w_f_region",
+            "queries": [
+              {
+                "name": "filter_w_f_region_metrics_customer_region",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "customer_region",
+                      "expression": "`customer_region`"
+                    },
+                    {
+                      "name": "customer_region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_w_f_region_routes_customer_region",
+                "query": {
+                  "datasetName": "routes",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "customer_region",
+                      "expression": "`customer_region`"
+                    },
+                    {
+                      "name": "customer_region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "customer_region",
+                    "displayName": "customer_region",
+                    "queryName": "filter_w_f_region_metrics_customer_region"
+                  },
+                  {
+                    "fieldName": "customer_region",
+                    "displayName": "customer_region",
+                    "queryName": "filter_w_f_region_routes_customer_region"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Customer region"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "w_routes",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "routes",
+                  "fields": [
+                    {
+                      "name": "excess_rank",
+                      "expression": "`excess_rank`"
+                    },
+                    {
+                      "name": "route",
+                      "expression": "`route`"
+                    },
+                    {
+                      "name": "orders",
+                      "expression": "`orders`"
+                    },
+                    {
+                      "name": "broken_pct",
+                      "expression": "`broken_pct`"
+                    },
+                    {
+                      "name": "margin_pts",
+                      "expression": "`margin_pts`"
+                    },
+                    {
+                      "name": "excess_broken",
+                      "expression": "`excess_broken`"
+                    },
+                    {
+                      "name": "broken_pct_outside_busy_months",
+                      "expression": "`broken_pct_outside_busy_months`"
+                    },
+                    {
+                      "name": "fix_type",
+                      "expression": "`fix_type`"
+                    },
+                    {
+                      "name": "first_step",
+                      "expression": "`first_step`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "rowsPerPage": 10,
+              "displayRowNumbers": false,
+              "data": {
+                "queryName": "main_query"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "excess_rank",
+                    "displayName": "Rank",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "route",
+                    "displayName": "Route",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "orders",
+                    "displayName": "Orders",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "broken_pct",
+                    "displayName": "Broken %",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0.0"
+                    }
+                  },
+                  {
+                    "fieldName": "margin_pts",
+                    "displayName": "+/- points",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0.0"
+                    }
+                  },
+                  {
+                    "fieldName": "excess_broken",
+                    "displayName": "Excess broken",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "broken_pct_outside_busy_months",
+                    "displayName": "Broken % outside busy months",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0.0"
+                    }
+                  },
+                  {
+                    "fieldName": "fix_type",
+                    "displayName": "Fix type",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "style": {
+                      "type": "basic",
+                      "rules": [
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "Both"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FF3621"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "Lasting fix"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FFAB00"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "Busy-season plan"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#3A7DC9"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "Watch"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#919191"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "fieldName": "first_step",
+                    "displayName": "First step",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Routes to fix first",
+                "showDescription": true,
+                "description": "Ranked by excess broken promises: broken minus what the national rate (8.7%) predicts for the route's orders. The fix type compares busy months with the rest of the year, so this table ignores the month filter."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "w_line",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "purchase_month",
+                      "expression": "`purchase_month`"
+                    },
+                    {
+                      "name": "measure(broken_rate)",
+                      "expression": "MEASURE(`broken_rate`)"
+                    },
+                    {
+                      "name": "customer_area",
+                      "expression": "`customer_area`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "purchase_month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Purchase month",
+                  "axis": {
+                    "title": "Purchase month"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Broken-promise rate"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fieldName": "measure(broken_rate)",
+                  "displayName": "Broken-promise rate"
+                },
+                "color": {
+                  "fieldName": "customer_area",
+                  "displayName": "Customer area",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Broken-promise rate by month and area",
+                "showDescription": true,
+                "description": "Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least twice the median month. The Northeast breaks promises in ordinary months too."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w_later",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "customer_region",
+                      "expression": "`customer_region`"
+                    },
+                    {
+                      "name": "measure(broken_rate)",
+                      "expression": "MEASURE(`broken_rate`)"
+                    },
+                    {
+                      "name": "measure(broken_rate_if_3_days_later)",
+                      "expression": "MEASURE(`broken_rate_if_3_days_later`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "customer_region",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  },
+                  "displayName": "Customer region",
+                  "axis": {
+                    "title": "Customer region"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Broken-promise rate"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(broken_rate)",
+                      "displayName": "Now"
+                    },
+                    {
+                      "fieldName": "measure(broken_rate_if_3_days_later)",
+                      "displayName": "Promise 3 days later"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Now vs a promise 3 days later, by region",
+                "showDescription": true,
+                "description": "Promising later fixes less than a quarter of the problem, and less in the Northeast, where a late order typically arrives 8 days late."
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 11,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w_days",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "promise_outcome",
+                      "expression": "`promise_outcome`"
+                    },
+                    {
+                      "name": "measure(avg_days_to_carrier)",
+                      "expression": "MEASURE(`avg_days_to_carrier`)"
+                    },
+                    {
+                      "name": "measure(avg_days_carrier_to_customer)",
+                      "expression": "MEASURE(`avg_days_carrier_to_customer`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "promise_outcome",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Promise",
+                  "axis": {
+                    "title": "Promise"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Average days"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "measure(avg_days_to_carrier)",
+                      "displayName": "Purchase to carrier"
+                    },
+                    {
+                      "fieldName": "measure(avg_days_carrier_to_customer)",
+                      "displayName": "Carrier to customer"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Where the days go: seller to carrier, carrier to customer",
+                "showDescription": true,
+                "description": "Most of the delay happens after the handover: 72.2% of late deliveries were handed to the carrier by the seller's deadline."
+              },
+              "mark": {
+                "layout": "stack"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 17,
+            "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w_handed",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_late_handed_over_by_deadline)",
+                      "expression": "MEASURE(`share_late_handed_over_by_deadline`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_late_handed_over_by_deadline)",
+                  "displayName": "Late deliveries handed over on time",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Late deliveries handed over on time",
+                "showDescription": true,
+                "description": "Delivered broken promises whose seller handed the parcel to the carrier by the deadline."
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 17,
+            "width": 2,
+            "height": 6
+          }
+        }
+      ]
+    },
+    {
+      "name": "page2",
+      "displayName": "Can we trust it",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "t_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Can we trust it\n",
+                "The checks the pipeline ran, what each cleaning rule did, the rows set aside, why the analysis stops in August 2018, and whether one region is served worse."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "t_checks",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "checks",
+                  "fields": [
+                    {
+                      "name": "check_no",
+                      "expression": "`check_no`"
+                    },
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "result",
+                      "expression": "`result`"
+                    },
+                    {
+                      "name": "detail",
+                      "expression": "`detail`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "rowsPerPage": 30,
+              "displayRowNumbers": false,
+              "data": {
+                "queryName": "main_query"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_no",
+                    "displayName": "#",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "check_name",
+                    "displayName": "Check",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "result",
+                    "displayName": "Result",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "style": {
+                      "type": "basic",
+                      "rules": [
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "PASS"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#00A972"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "MATCH"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#00A972"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "WARN"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FFAB00"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "ESCALATE"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FFAB00"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "PAGE"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FF3621"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "FAIL"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FF3621"
+                        },
+                        {
+                          "condition": {
+                            "operand": {
+                              "type": "data-value",
+                              "value": "DIFFERS"
+                            },
+                            "operator": "="
+                          },
+                          "foregroundColor": "#FFAB00"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "fieldName": "detail",
+                    "displayName": "Detail",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Pipeline checks",
+                "showDescription": true,
+                "description": "Recalculated whenever the dashboard is refreshed. Every row should say PASS."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 6,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "t_rules",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "rules",
+                  "fields": [
+                    {
+                      "name": "rule_no",
+                      "expression": "`rule_no`"
+                    },
+                    {
+                      "name": "action",
+                      "expression": "`action`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    },
+                    {
+                      "name": "table_name",
+                      "expression": "`table_name`"
+                    },
+                    {
+                      "name": "rule",
+                      "expression": "`rule`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "rowsPerPage": 30,
+              "displayRowNumbers": false,
+              "data": {
+                "queryName": "main_query"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "rule_no",
+                    "displayName": "Rule",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "action",
+                    "displayName": "Action",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "row_count",
+                    "displayName": "Rows today",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "table_name",
+                    "displayName": "Table",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "rule",
+                    "displayName": "What it does",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Silver rules: rows fixed, kept, flagged or set aside",
+                "showDescription": true,
+                "description": "The rules and their reasons are in docs/data_quality_log.md."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 4,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "t_quarantine",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "quarantine",
+                  "fields": [
+                    {
+                      "name": "table_and_reason",
+                      "expression": "`table_and_reason`"
+                    },
+                    {
+                      "name": "row_count",
+                      "expression": "`row_count`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "table_and_reason",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  },
+                  "displayName": "Table: reason",
+                  "axis": {
+                    "title": "Table: reason"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Rows"
+                  },
+                  "fieldName": "row_count",
+                  "displayName": "Rows"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Rows set aside, by reason",
+                "showDescription": true,
+                "description": "Quarantine rate is check 5: class thresholds warn 1%, escalate 3%, page 10%."
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 12,
+            "width": 2,
+            "height": 10
+          }
+        },
+        {
+          "widget": {
+            "name": "t_deliveries",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "deliveries",
+                  "fields": [
+                    {
+                      "name": "delivery_month",
+                      "expression": "`delivery_month`"
+                    },
+                    {
+                      "name": "deliveries",
+                      "expression": "`deliveries`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "delivery_month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Month delivered",
+                  "axis": {
+                    "title": "Month delivered"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Deliveries"
+                  },
+                  "fieldName": "deliveries",
+                  "displayName": "Deliveries"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Deliveries recorded per month",
+                "showDescription": true,
+                "description": "8,314 deliveries in August 2018, then 56 in September and 3 in October. So a promise is judged only if its day passed by August 31, 2018."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 22,
+            "width": 3,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "t_fair",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "fairness",
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "judged_orders",
+                      "expression": "`judged_orders`"
+                    },
+                    {
+                      "name": "broken_pct",
+                      "expression": "`broken_pct`"
+                    },
+                    {
+                      "name": "margin_pts",
+                      "expression": "`margin_pts`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "table",
+              "rowsPerPage": 30,
+              "displayRowNumbers": false,
+              "data": {
+                "queryName": "main_query"
+              },
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "region",
+                    "displayName": "Customer region",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "judged_orders",
+                    "displayName": "Orders",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0,0"
+                    }
+                  },
+                  {
+                    "fieldName": "broken_pct",
+                    "displayName": "Broken %",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0.0"
+                    }
+                  },
+                  {
+                    "fieldName": "margin_pts",
+                    "displayName": "+/- points",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    },
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0.0"
+                    }
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Fairness: broken-promise rate by region, with margins",
+                "showDescription": true,
+                "description": "Northeast customers get worse service. We show the gap with its margin; the fixes aim at routes and carriers, never at customers or sellers."
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 22,
+            "width": 3,
+            "height": 6
+          }
+        }
+      ]
+    }
+  ]
+}

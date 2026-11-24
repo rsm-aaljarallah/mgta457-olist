@@ -1,0 +1,82 @@
+{
+  "pages": [
+    {
+      "dashboard": 1,
+      "heading": "Dashboard 1: What broken promises cost",
+      "file": "sketch_1_what_broken_promises_cost.png",
+      "layout": [
+        {"kind": "text", "title": "What broken promises cost", "x": 0, "y": 0, "w": 6, "h": 1},
+        {"kind": "filter", "title": "Purchase month", "x": 0, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Customer region", "x": 2, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Product category", "x": 4, "y": 1, "w": 2, "h": 1},
+        {"kind": "card", "title": "Orders with a broken promise", "x": 0, "y": 2, "w": 2, "h": 3},
+        {"kind": "card", "title": "1-2 star reviews that follow a broken promise", "x": 2, "y": 2, "w": 2, "h": 3},
+        {"kind": "card", "title": "Late orders reviewed before they arrived", "x": 4, "y": 2, "w": 2, "h": 3},
+        {"kind": "bar", "title": "Review score by days before or after the promised day", "x": 0, "y": 5, "w": 3, "h": 6},
+        {"kind": "bar", "title": "On time vs late, same delivery time", "x": 3, "y": 5, "w": 3, "h": 6},
+        {"kind": "text", "title": "Note: review links are correlations; each order counts its latest review once.", "x": 0, "y": 11, "w": 6, "h": 1}
+      ]
+    },
+    {
+      "dashboard": 2,
+      "heading": "Dashboard 2, page 1: Where promises break",
+      "file": "sketch_2_where_promises_break.png",
+      "layout": [
+        {"kind": "text", "title": "Where promises break", "x": 0, "y": 0, "w": 6, "h": 1},
+        {"kind": "filter", "title": "Purchase month", "x": 0, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Seller state", "x": 2, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Customer region", "x": 4, "y": 1, "w": 2, "h": 1},
+        {"kind": "table", "title": "Routes to fix first: rate, margin, excess, fix type, first step", "x": 0, "y": 2, "w": 6, "h": 8},
+        {"kind": "line", "title": "Broken-promise rate by month and area", "x": 0, "y": 10, "w": 3, "h": 6},
+        {"kind": "bar", "title": "Now vs a promise 3 days later, by region", "x": 3, "y": 10, "w": 3, "h": 6},
+        {"kind": "bar", "title": "Where the days go: seller to carrier, carrier to customer", "x": 0, "y": 16, "w": 6, "h": 6}
+      ]
+    },
+    {
+      "dashboard": 2,
+      "heading": "Dashboard 2, page 2: Can we trust it",
+      "file": "sketch_2_trust_page.png",
+      "layout": [
+        {"kind": "text", "title": "Can we trust it", "x": 0, "y": 0, "w": 6, "h": 1},
+        {"kind": "table", "title": "Checks and Silver rules: rows kept, flagged, set aside", "x": 0, "y": 1, "w": 4, "h": 7},
+        {"kind": "bar", "title": "Rows set aside, by reason", "x": 4, "y": 1, "w": 2, "h": 7},
+        {"kind": "bar", "title": "Deliveries recorded per month", "x": 0, "y": 8, "w": 3, "h": 6},
+        {"kind": "bar", "title": "Fairness: broken-promise rate by region, with margins", "x": 3, "y": 8, "w": 3, "h": 6}
+      ]
+    },
+    {
+      "dashboard": 3,
+      "heading": "Dashboard 3: Where local sellers would help",
+      "file": "sketch_3_where_local_sellers_would_help.png",
+      "layout": [
+        {"kind": "text", "title": "Where local sellers would help", "x": 0, "y": 0, "w": 6, "h": 1},
+        {"kind": "filter", "title": "Customer region", "x": 0, "y": 1, "w": 3, "h": 1},
+        {"kind": "filter", "title": "Product category", "x": 3, "y": 1, "w": 3, "h": 1},
+        {"kind": "scatter", "title": "States: orders per 100,000 residents vs broken rate", "x": 0, "y": 2, "w": 3, "h": 7},
+        {"kind": "bar", "title": "Local vs Sao Paulo sellers: broken rate, days", "x": 3, "y": 2, "w": 3, "h": 7},
+        {"kind": "bar", "title": "Share of orders, sellers and funnel recruits, by state", "x": 0, "y": 9, "w": 6, "h": 6}
+      ]
+    }
+  ],
+  "flow": {
+    "title": "Intended user flow: who starts where, and what they ask",
+    "file": "user_flow.png",
+    "rows": [
+      {"reader": "Customer experience",
+       "boxes": [{"title": "Dashboard 1: What it costs", "question": "How many bad reviews follow a broken promise, and when are they written?"},
+                 {"title": "Dashboard 2: Where they break", "question": "Which routes and months drive it?"}],
+       "arrows": ["if the share is high"]},
+      {"reader": "Logistics",
+       "boxes": [{"title": "Dashboard 2: Where they break", "question": "Which routes do we fix first?"},
+                 {"title": "Routes table, same page", "question": "Lasting fix, busy-season plan, or both? Then brief the carrier."}],
+       "arrows": ["picks a route"]},
+      {"reader": "Seller acquisition",
+       "boxes": [{"title": "Dashboard 3: Local sellers", "question": "Which states lack nearby sellers?"},
+                 {"title": "Funnel shares, same page", "question": "Is our funnel recruiting there? Then plan a pilot."}],
+       "arrows": ["picks a state"]},
+      {"reader": "Anyone",
+       "boxes": [{"title": "Dashboard 2: Can we trust it", "question": "Page 2. Did every check pass? What was set aside?"}],
+       "arrows": []}
+    ]
+  }
+}

@@ -1,0 +1,559 @@
+{
+  "datasets": [
+    {
+      "name": "metrics",
+      "displayName": "delivery_metrics",
+      "asset_name": "olist.analytics.delivery_metrics"
+    },
+    {
+      "name": "states",
+      "displayName": "states",
+      "queryLines": [
+        "SELECT * FROM olist.analytics.state_view"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "page1",
+      "displayName": "Where local sellers would help",
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layout": [
+        {
+          "widget": {
+            "name": "l_title",
+            "multilineTextboxSpec": {
+              "lines": [
+                "# Where local sellers would help\n",
+                "For the Head of Seller Acquisition: which states buy a lot but have few nearby sellers, how much faster local sellers deliver, and whether the funnel recruits there."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "l_f_region",
+            "queries": [
+              {
+                "name": "filter_l_f_region_metrics_customer_region",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "customer_region",
+                      "expression": "`customer_region`"
+                    },
+                    {
+                      "name": "customer_region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_l_f_region_states_region",
+                "query": {
+                  "datasetName": "states",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "region_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "customer_region",
+                    "displayName": "customer_region",
+                    "queryName": "filter_l_f_region_metrics_customer_region"
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "region",
+                    "queryName": "filter_l_f_region_states_region"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Customer region"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "l_f_state",
+            "queries": [
+              {
+                "name": "filter_l_f_state_metrics_customer_state",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "customer_state",
+                      "expression": "`customer_state`"
+                    },
+                    {
+                      "name": "customer_state_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "filter_l_f_state_states_state",
+                "query": {
+                  "datasetName": "states",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "state",
+                      "expression": "`state`"
+                    },
+                    {
+                      "name": "state_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "customer_state",
+                    "displayName": "customer_state",
+                    "queryName": "filter_l_f_state_metrics_customer_state"
+                  },
+                  {
+                    "fieldName": "state",
+                    "displayName": "state",
+                    "queryName": "filter_l_f_state_states_state"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Customer state"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "l_f_cat",
+            "queries": [
+              {
+                "name": "filter_l_f_cat_metrics_category",
+                "query": {
+                  "datasetName": "metrics",
+                  "disaggregated": false,
+                  "fields": [
+                    {
+                      "name": "category",
+                      "expression": "`category`"
+                    },
+                    {
+                      "name": "category_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "category",
+                    "displayName": "category",
+                    "queryName": "filter_l_f_cat_metrics_category"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Product category"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 2,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "l_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "states",
+                  "fields": [
+                    {
+                      "name": "orders_per_100k",
+                      "expression": "`orders_per_100k`"
+                    },
+                    {
+                      "name": "broken_pct",
+                      "expression": "`broken_pct`"
+                    },
+                    {
+                      "name": "region",
+                      "expression": "`region`"
+                    },
+                    {
+                      "name": "state_name",
+                      "expression": "`state_name`"
+                    },
+                    {
+                      "name": "active_sellers_per_million",
+                      "expression": "`active_sellers_per_million`"
+                    },
+                    {
+                      "name": "pct_orders_from_other_state",
+                      "expression": "`pct_orders_from_other_state`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "orders_per_100k",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Orders per 100,000 residents (12 months to Aug 2018)",
+                  "axis": {
+                    "title": "Orders per 100,000 residents (12 months to Aug 2018)"
+                  }
+                },
+                "y": {
+                  "fieldName": "broken_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Broken %",
+                  "axis": {
+                    "title": "Broken %"
+                  }
+                },
+                "color": {
+                  "fieldName": "region",
+                  "displayName": "Region",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "extra": [
+                  {
+                    "fieldName": "state_name",
+                    "displayName": "State"
+                  },
+                  {
+                    "fieldName": "active_sellers_per_million",
+                    "displayName": "Active sellers per million"
+                  },
+                  {
+                    "fieldName": "pct_orders_from_other_state",
+                    "displayName": "% of orders from another state"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "States: orders per 100,000 residents vs broken-promise rate",
+                "showDescription": true,
+                "description": "Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter of its sellers per resident and gets 91.5% of its orders from another state. Population: IBGE 2018. The category filter does not apply here."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 3,
+            "width": 3,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "l_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "seller_location",
+                      "expression": "`seller_location`"
+                    },
+                    {
+                      "name": "measure(broken_rate)",
+                      "expression": "MEASURE(`broken_rate`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "seller_location",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Seller",
+                  "axis": {
+                    "title": "Seller"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Broken-promise rate"
+                  },
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fieldName": "measure(broken_rate)",
+                  "displayName": "Broken-promise rate"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Local vs Sao Paulo sellers: broken-promise rate",
+                "showDescription": true,
+                "description": "Pick one customer state above. For Rio: local sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%."
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 3,
+            "width": 3,
+            "height": 9
+          }
+        },
+        {
+          "widget": {
+            "name": "l_days",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "seller_location",
+                      "expression": "`seller_location`"
+                    },
+                    {
+                      "name": "measure(median_delivery_days)",
+                      "expression": "MEASURE(`median_delivery_days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "seller_location",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Seller",
+                  "axis": {
+                    "title": "Seller"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Median days from purchase to delivery"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fieldName": "measure(median_delivery_days)",
+                  "displayName": "Median days"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Local vs Sao Paulo sellers: median days to deliver",
+                "showDescription": true,
+                "description": "Local sellers may sell different products, so this is a correlation: a recruiting pilot has to prove the speed."
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "l_shares",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "states",
+                  "fields": [
+                    {
+                      "name": "state",
+                      "expression": "`state`"
+                    },
+                    {
+                      "name": "pct_of_orders",
+                      "expression": "`pct_of_orders`"
+                    },
+                    {
+                      "name": "pct_of_sellers",
+                      "expression": "`pct_of_sellers`"
+                    },
+                    {
+                      "name": "pct_of_funnel_recruits",
+                      "expression": "`pct_of_funnel_recruits`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "state",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  },
+                  "displayName": "Customer or seller state",
+                  "axis": {
+                    "title": "Customer or seller state"
+                  }
+                },
+                "y": {
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "axis": {
+                    "title": "Percent"
+                  },
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  },
+                  "fields": [
+                    {
+                      "fieldName": "pct_of_orders",
+                      "displayName": "% of orders (12 months)"
+                    },
+                    {
+                      "fieldName": "pct_of_sellers",
+                      "displayName": "% of all sellers"
+                    },
+                    {
+                      "fieldName": "pct_of_funnel_recruits",
+                      "displayName": "% of funnel recruits who sold"
+                    }
+                  ]
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Share of orders, sellers and funnel recruits, by state",
+                "showDescription": true,
+                "description": "The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and 61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%."
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 18,
+            "width": 6,
+            "height": 7
+          }
+        }
+      ]
+    }
+  ]
+}
