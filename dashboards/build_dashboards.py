@@ -4,7 +4,9 @@ Why a script: the dashboard files are long JSON. Generating them from one
 short description keeps the three dashboards consistent, and lets each
 teammate import the same dashboards into their own Databricks account
 (Dashboards > arrow next to Create dashboard > Import dashboard from file).
-The layout follows docs/dashboard_plan.json, the plan in the design document.
+The layout started from docs/dashboard_plan.json, the plan in the design
+document; the build adds one card, splits two charts and shows the fairness
+check as a table (19 visuals, against 16 sketched).
 
 The dashboards contain no business logic. Every widget either shows a column
 of a Gold table or view as it is, or asks the metric view
@@ -24,7 +26,7 @@ PCT = {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 1}}
 TWO = {"type": "number-plain", "decimalPlaces": {"type": "max", "places": 2}}
 ONE = {"type": "number-plain", "decimalPlaces": {"type": "max", "places": 1}}
 
-# One color per meaning, the same on every page. Broken promises are always red.
+# Colour carries meaning only for the fix type and the check results.
 RED, AMBER, GREEN, GRAY, BLUE, TEAL = "#FF3621", "#FFAB00", "#00A972", "#919191", "#3A7DC9", "#7BC4C4"
 RESULT_COLORS = {"PASS": GREEN, "MATCH": GREEN, "WARN": AMBER, "ESCALATE": AMBER, "PAGE": RED, "FAIL": RED,
                  "DIFFERS": AMBER}
@@ -214,9 +216,9 @@ cost = dashboard(["metrics"], [("What broken promises cost", [
     place(counter("c_rate", "Orders with a broken promise", "broken_rate", PCT,
                   "Of judged orders"), 0, 2, 2, 3),
     place(counter("c_low", "1-2 star reviews that follow a broken promise", "share_low_reviews_after_broken_promise",
-                  PCT, "Of all 1-2 star reviews"), 2, 2, 2, 3),
+                  PCT, "Of in-window orders with a 1-2 star review"), 2, 2, 2, 3),
     place(counter("c_before", "Late orders reviewed before they arrived", "share_late_reviewed_before_arrival", PCT,
-                  "1.65 stars, against 3.72 after"), 4, 2, 2, 3),
+                  "No filter: 1.65 stars before, 3.72 after"), 4, 2, 2, 3),
     place(chart("c_bucket", "bar", "Review score by days before or after the promised day", "metrics",
                 "promise_bucket_label", "Delivered, compared with the promised day", "categorical",
                 [("avg_review_score", "Average review score")], "Average review score", TWO,
@@ -226,13 +228,13 @@ cost = dashboard(["metrics"], [("What broken promises cost", [
                 "delivery_time_band", "Days from purchase to delivery", "categorical",
                 [("avg_score_kept", "Promise kept"), ("avg_score_broken", "Promise broken")],
                 "Average review score", TWO,
-                description="Orders that took the same time to arrive: late ones score lower in every band, "
+                description="With no filter, late orders score lower in every band of the same delivery time, "
                             "so the score follows the promise, not only the speed."), 3, 5, 3, 7),
     place(text("c_note", "**Read with care.** Every link between promises and reviews is a correlation. "
                "The cheap test it points to: a delay notice with a new date, sent before the review survey to "
-               "customers whose parcel will miss. A promise is judged when the order was bought from January 2017 "
-               "and promised by August 31, 2018, and was not canceled. Each order counts its latest review once. "
-               "Source: `olist.analytics.delivery_metrics`."), 0, 12, 6, 2),
+               "customers whose parcel will miss. Judged orders: bought from January 2017 and promised by "
+               "August 31, 2018, not canceled or unavailable, and not one of 8 marked delivered with no delivery date; an order that never arrived counts as broken. Each "
+               "order counts its latest review once. Source: `olist.analytics.delivery_metrics`."), 0, 12, 6, 3),
 ])])
 
 # ---------------------------------------------------------------- dashboard 2
@@ -251,36 +253,42 @@ where = dashboard(["metrics", "routes", "checks", "rules", "quarantine", "delive
             ("route", "Route", "text"),
             ("orders", "Orders", "int"),
             ("broken_pct", "Broken %", "one_decimal"),
-            ("margin_pts", "+/- points", "one_decimal"),
+            ("margin_pts", "+/- points", "text"),
             ("excess_broken", "Excess broken", "int"),
-            ("broken_pct_outside_busy_months", "Broken % outside busy months", "one_decimal"),
             ("fix_type", "Fix type", "text"),
             ("first_step", "First step", "text"),
         ], colors={"fix_type": color_by_value(FIX_COLORS)}, rows=10,
             description="Ranked by excess broken promises: broken minus what the national rate (8.7%) predicts "
-                        "for the route's orders. The fix type compares busy months with the rest of the year, so "
-                        "this table ignores the month filter."), 0, 2, 6, 8),
+                        "for the route's orders. A route with fewer than 100 orders gets no fix type (Watch) and "
+                        "no margin (shown as –). The "
+                        "fix type compares busy months with the rest of the year, so this table ignores the month "
+                        "filter."), 0, 2, 6, 8),
         place(chart("w_line", "line", "Broken-promise rate by month and area", "metrics", "purchase_month",
                     "Purchase month", "temporal", [("broken_rate", "Broken-promise rate")], "Broken-promise rate",
                     PCT, color="customer_area", color_title="Customer area",
                     description="Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least "
-                                "twice the median month. The Northeast breaks promises in ordinary months too."),
+                                "twice the median month. The Northeast breaks promises in ordinary months too. "
+                                "August 2018 is a partial month: about 30% of its orders were promised for "
+                                "September and are not judged."),
               0, 10, 3, 6),
         place(chart("w_later", "bar", "Now vs a promise 3 days later, by region", "metrics", "customer_region",
                     "Customer region", "categorical",
                     [("broken_rate", "Now"), ("broken_rate_if_3_days_later", "Promise 3 days later")],
                     "Broken-promise rate", PCT, sort_desc=True,
-                    description="Promising later fixes less than a quarter of the problem, and less in the "
-                                "Northeast, where a late order typically arrives 8 days late."), 3, 10, 3, 6),
-        place(chart("w_days", "bar", "Where the days go: seller to carrier, carrier to customer", "metrics",
+                    description="With no filter: promising later fixes less than a quarter of the problem, and "
+                                "less in the Northeast, where a late order typically arrives 8 days late."),
+              3, 10, 3, 6),
+        place(chart("w_days", "bar", "Where the days go: purchase to carrier, carrier to customer", "metrics",
                     "promise_outcome", "Promise", "categorical",
                     [("avg_days_to_carrier", "Purchase to carrier"),
                      ("avg_days_carrier_to_customer", "Carrier to customer")],
                     "Average days", ONE, stack=True,
-                    description="Most of the delay happens after the handover: 72.2% of late deliveries were "
-                                "handed to the carrier by the seller's deadline."), 0, 16, 4, 6),
+                    description="Judged orders that arrived, both parts measured on the same orders, so each bar "
+                                "adds up to the delivery time. Most of a broken promise's delay comes after the "
+                                "handover."), 0, 16, 4, 6),
         place(counter("w_handed", "Late deliveries handed over on time", "share_late_handed_over_by_deadline", PCT,
-                      "Delivered broken promises whose seller handed the parcel to the carrier by the deadline."),
+                      "Of delivered broken promises from one seller, the share handed to the carrier by the "
+                      "seller's deadline."),
               4, 16, 2, 6),
     ]),
     ("Can we trust it", [
@@ -298,7 +306,7 @@ where = dashboard(["metrics", "routes", "checks", "rules", "quarantine", "delive
         place(table("t_rules", "Silver rules: rows fixed, kept, flagged or set aside", "rules", [
             ("rule_no", "Rule", "int"),
             ("action", "Action", "text"),
-            ("row_count", "Rows today", "int"),
+            ("row_count", "Rows", "int"),
             ("table_name", "Table", "text"),
             ("rule", "What it does", "text"),
         ], description="The rules and their reasons are in docs/data_quality_log.md."), 0, 11, 4, 10),
@@ -308,8 +316,9 @@ where = dashboard(["metrics", "routes", "checks", "rules", "quarantine", "delive
                                                 "escalate 3%, page 10%."), 4, 11, 2, 10),
         place(chart("t_deliveries", "bar", "Deliveries recorded per month", "deliveries", "delivery_month",
                     "Month delivered", "temporal", [("deliveries", "Deliveries")], "Deliveries", is_measure=False,
-                    description="8,314 deliveries in August 2018, then 56 in September and 3 in October. So a "
-                                "promise is judged only if its day passed by August 31, 2018."), 0, 21, 3, 6),
+                    description="8,314 deliveries in August 2018, then 56 in September and 3 in October, so a "
+                                "promise is judged only if its day passed by August 31, 2018. Even so, the last "
+                                "days of August hold mostly orders that had already arrived."), 0, 21, 3, 6),
         place(table("t_fair", "Fairness: broken-promise rate by region, with margins", "fairness", [
             ("region", "Customer region", "text"),
             ("judged_orders", "Orders", "int"),
@@ -335,14 +344,17 @@ local = dashboard(["metrics", "states"], [("Where local sellers would help", [
                   "orders_per_100k", "Orders per 100,000 residents (12 months to Aug 2018)",
                   "broken_pct", "Broken %", "region", "Region",
                   [("state_name", "State"), ("active_sellers_per_million", "Active sellers per million"),
-                   ("pct_orders_from_other_state", "% of orders from another state")],
-                  description="Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter "
-                              "of its sellers per resident and gets 91.5% of its orders from another state. "
-                              "Population: IBGE 2018. The state and category filters do not apply here."), 0, 2, 3, 9),
+                   ("pct_orders_from_other_state", "% of single-seller orders from another state")],
+                  description="Each dot is a state: orders per 100,000 residents (IBGE 2018 population) in the 12 "
+                              "months to August 2018, against the broken-promise rate over the whole window. Rio "
+                              "buys 56.4 against 71.7 in Sao Paulo, with a quarter of Sao Paulo's sellers per "
+                              "resident. Only the region filter applies here."), 0, 2, 3, 9),
     place(chart("l_rate", "bar", "Local vs Sao Paulo sellers: broken-promise rate", "metrics", "seller_location",
                 "Seller", "categorical", [("broken_rate", "Broken-promise rate")], "Broken-promise rate", PCT,
-                description="Pick one customer state above. For Rio: local sellers 7.7% (+/- 1.7), "
-                            "Sao Paulo sellers 17.1%."), 3, 2, 3, 9),
+                description="Pick one customer state above. Example, Rio de Janeiro with no other filter: local "
+                            "sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy months "
+                            "(4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several sellers or "
+                            "no item' holds the orders with no single seller."), 3, 2, 3, 9),
     place(chart("l_days", "bar", "Local vs Sao Paulo sellers: median days to deliver", "metrics",
                 "seller_location", "Seller", "categorical", [("median_delivery_days", "Median days")],
                 "Median days from purchase to delivery", ONE,
@@ -354,7 +366,9 @@ local = dashboard(["metrics", "states"], [("Where local sellers would help", [
                  ("pct_of_funnel_recruits", "% of funnel recruits who sold")],
                 "Percent", ONE, is_measure=False, sort_desc=True,
                 description="The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and "
-                            "61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%."),
+                            "61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%. The "
+                            "region filter narrows the states shown; the state and category filters do not apply "
+                            "here."),
           0, 17, 6, 7),
 ])])
 

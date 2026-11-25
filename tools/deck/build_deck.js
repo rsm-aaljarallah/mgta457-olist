@@ -1,6 +1,9 @@
 // Builds the Olist team presentation: deliverables/olist_presentation.pptx
 // Run from the repo root:
-//   NODE_PATH=/Users/aj/Documents/BI/tools/deck/node_modules node tools/deck/build_deck.js
+//   NODE_PATH=<folder with pptxgenjs> OLIST_THEME_SCRIPT=<theme helper> node tools/deck/build_deck.js
+// NODE_PATH must point at a folder where pptxgenjs is installed (npm install pptxgenjs).
+// The colour theme is applied by a helper outside this repository; set OLIST_THEME_SCRIPT
+// to its path, or leave it missing and the deck is written without the theme step.
 // Speaker notes come from tools/deck/script.json, the same text as docs/presentation_outline.md.
 // Screenshots come from docs/img (taken from the published dashboards on 2026-11-24).
 // AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's deck script
@@ -8,12 +11,19 @@
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
-const { applyTheme } = require("/Users/aj/.claude/skills/synced/9e2a1a81-d474-4f3b-8371-0e900b32c194_ec8835a9-5edd-4f14-ab67-eb6e9e72ae88/pptx/scripts/apply_theme.js");
+const THEME_SCRIPT = process.env.OLIST_THEME_SCRIPT || "";
+let applyTheme = null;
+try {
+  if (!THEME_SCRIPT) throw new Error("OLIST_THEME_SCRIPT is not set");
+  ({ applyTheme } = require(THEME_SCRIPT));
+} catch (e) {
+  console.warn("Theme helper not found, so the deck is written without the theme step:", THEME_SCRIPT);
+}
 
 const ROOT = path.resolve(__dirname, "..", "..");
 const SCRIPT = require("./script.json");
 const IMG = path.join(ROOT, "docs", "img");
-const OUT = path.join(ROOT, "deliverables", "olist_presentation.pptx");
+const OUT = process.env.OLIST_DECK_OUT || path.join(ROOT, "deliverables", "olist_presentation.pptx");
 const say = (n) => { const s = SCRIPT.find((x) => x.slide === n); return `${s.speaker} (${s.minutes} min): ${s.say}`; };
 
 const THEME = {
@@ -110,14 +120,14 @@ s.addText("A promise is broken when the order was not delivered by the end of th
 pres.addSection({ title: "How we built it" });
 s = content(3, "How we built it");
 shot(s, "lineage.png", 0.6, 1.4, 12.1, 4.6, "Lineage map");
-s.addText("31 Silver rules  ·  2 facts, 4 dimensions  ·  1 metric view holds every rate  ·  21 checks  ·  the dashboards calculate nothing",
+s.addText("31 cleaning rules  ·  2 facts, 4 dimensions  ·  1 metric view for the filtered rates  ·  24 checks  ·  the dashboards calculate nothing",
   { x: 0.6, y: 6.25, w: 12.1, h: 0.5, fontSize: 15, color: C.accent5, bold: true, margin: 0, align: "center", isTextBox: true, objectName: "Pipeline summary" });
 
 // ---------------------------------------------------------------- 4 traps
 s = content(4, "How we built it");
 [
   ["Late by timestamp", "1,292", "on-time deliveries look late, because the promise has no time of day. We compare days."],
-  ["Joins on the wrong grain", "+4.6%", "sales when items join payments; 99k customers become 15M rows via locations. We aggregate first."],
+  ["Joins on the wrong grain", "+4.6%", "item value when items join payments; 99k customers become 15M rows via locations. We aggregate first."],
   ["Repeated reviews", "547", "orders with 2+ reviews, 202 with different scores. We keep the latest: one score per order."],
   ["A window that ends early", "56", "deliveries in Sep 2018 after 8,314 in Aug. We judge only promises due by Aug 31, 2018."],
 ].forEach(([head, big, text], i) => {
@@ -133,10 +143,10 @@ pres.addSection({ title: "What we found" });
 s = content(5, "What we found");
 shot(s, "dash_1_cost.png", 0.6, 1.35, 8.2, 5.5, "Dashboard 1 screenshot");
 points(s, [
-  "8.6% of orders, but 36.7% of the 1-2 star reviews",
+  "8.6% of judged orders, but 36.7% of in-window orders with a 1-2 star review, canceled ones included",
   "The score holds while parcels arrive early, then drops right after the promised day: 4.03 on the day, 2.10 at 4-7 days late",
-  "At the same delivery time, late orders score 0.4 to 1.8 stars lower",
-  "70.1% of late customers review before arrival: 1.65 stars, against 3.72 after",
+  "In the same delivery week, late orders score 0.4 to 1.8 stars lower",
+  "70.1% of late parcels with a review were reviewed before arrival: 1.65 stars, against 3.72 after",
 ], 9.1, 1.5, 3.7, 5.2, 15);
 
 // ---------------------------------------------------------------- 6 routes
@@ -144,7 +154,7 @@ s = content(6, "What we found");
 shot(s, "dash_2_routes.png", 0.6, 1.35, 8.2, 5.5, "Dashboard 2 routes screenshot");
 stat(s, 9.1, 1.5, 3.6, "678", "excess broken promises, Sao Paulo to Rio (17.1% +/- 0.8)", "SP to RJ", "D9534F");
 stat(s, 9.1, 3.25, 3.6, "637", "the next nine routes together", "Next nine");
-points(s, ["5 of the top 10 routes go into the Northeast", "Excess = broken minus what the 8.7% national rate predicts"], 9.1, 5.05, 3.6, 1.7, 14);
+points(s, ["5 of the top 10 routes go into the Northeast", "Excess = broken minus what the 8.7% national rate on single-seller orders predicts"], 9.1, 5.05, 3.6, 1.7, 14);
 
 // ---------------------------------------------------------------- 7 two kinds of fix
 s = content(7, "What we found");
@@ -153,7 +163,7 @@ points(s, [
   "Busy months (Nov 2017, Feb and Mar 2018): 22.1% of orders, 42.9% of broken promises → busy-season plan",
   "The Northeast breaks promises in ordinary months too → lasting fix",
   "A promise 3 days later: 8.6% → only 6.6%",
-  "72.2% of late parcels reached the carrier on time: the delay is after the handover",
+  "72.2% of late parcels from one seller reached the carrier on time: most of the delay is after the handover",
 ], 9.1, 1.5, 3.7, 5.2, 15);
 
 // ---------------------------------------------------------------- 8 local sellers
@@ -162,8 +172,8 @@ shot(s, "dash_3_local_rio.png", 0.6, 1.35, 8.2, 5.5, "Dashboard 3 screenshot, Ri
 points(s, [
   "Orders per 100,000 residents: Rio 56.4, Sao Paulo 71.7",
   "Active sellers per million: Rio 8.5, Sao Paulo 35.2",
-  "91.5% of Rio's orders come from another state",
-  "Rio customers, local sellers: 7.7% broken, 5 days. Sao Paulo sellers: 17.1%, 13 days",
+  "91.5% of Rio's single-seller orders come from another state",
+  "Rio customers, local sellers: 7.7% broken, 5 days. Sao Paulo sellers: 17.1%, 13 days. The gap is mostly in busy months; otherwise 8.7% vs 10.0%",
   "Rio got only 6.8% of the funnel recruits who sold",
 ], 9.1, 1.5, 3.7, 5.2, 15);
 
@@ -171,9 +181,9 @@ points(s, [
 pres.addSection({ title: "Can we trust it" });
 s = content(9, "Can we trust it");
 shot(s, "dash_2_trust_checks.png", 0.6, 1.35, 7.6, 5.4, "Pipeline checks screenshot");
-stat(s, 8.6, 1.5, 4.1, "21 / 21", "pipeline checks pass", "Checks", "00A972");
-stat(s, 8.6, 3.2, 4.1, "3 rows", "of 415,201 order rows set aside (0.001%)", "Quarantine");
-stat(s, 8.6, 4.9, 4.1, "39 / 39", "design-document numbers recomputed from Gold match", "Doc numbers", "00A972");
+stat(s, 8.6, 1.5, 4.1, "24 / 24", "pipeline checks pass", "Checks", "00A972");
+stat(s, 8.6, 3.2, 4.1, "3 rows", "of 415,201 order, item, payment and review rows set aside (0.001%)", "Quarantine");
+stat(s, 8.6, 4.9, 4.1, "56 / 56", "design-document results recomputed from Gold match", "Doc numbers", "00A972");
 
 // ---------------------------------------------------------------- 10 recommendations
 pres.addSection({ title: "What to do" });
@@ -195,7 +205,7 @@ s.addText("How we will know: the score of late orders (Dashboard 1), the rate on
 // ---------------------------------------------------------------- 11 limits and close
 s = pres.addSlide({ masterName: "DARK", sectionTitle: "What to do" });
 s.addText(SCRIPT[10].title, { placeholder: "title" });
-s.addText("Promise and review links are correlations  ·  no carrier or tracking data  ·  busy months found in the same data  ·  data ends August 2018\n\nQuestions?", { placeholder: "body" });
+s.addText("Promise and review links are correlations  ·  no carrier or tracking data  ·  busy months found in the same data  ·  deliveries recorded only to August 2018\n\nQuestions?", { placeholder: "body" });
 s.addNotes(say(11));
 
-pres.writeFile({ fileName: OUT }).then(() => applyTheme(OUT, THEME)).then(() => console.log("wrote", OUT));
+pres.writeFile({ fileName: OUT }).then(() => (applyTheme ? applyTheme(OUT, THEME) : null)).then(() => console.log("wrote", OUT));

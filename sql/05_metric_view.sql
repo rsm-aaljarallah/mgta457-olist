@@ -3,14 +3,18 @@
 -- File:     05_metric_view.sql
 -- Owner:    TODO name
 -- Purpose:  One Unity Catalog metric view, delivery_metrics, that
---           holds every rate the dashboards show. Each measure is
---           defined once here, and Databricks recalculates it for
---           whatever filters and groupings a dashboard uses.
+--           holds every rate a dashboard filter must recalculate. Each
+--           measure is defined once here, and Databricks recalculates
+--           it for whatever filters and groupings a dashboard uses.
+--           The few rates stored in Gold (months, routes, states) are
+--           compared with this view by check 22 of 06_checks.sql.
 -- Run:      After 04_gold.sql. Rebuilds the metric view. Safe to
 --           rerun. 06_checks.sql tests it against fact_orders.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24, following
 --           the metric view of the Chord project
 --           (see docs/ai_usage.md).
+--           Revised with Claude, 2026-11-24, after an audit: the two days
+--           measures use the same orders; label and comment fixes.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -24,8 +28,10 @@
 -- Three kinds of order appear below (see the top of 04_gold.sql):
 --   all orders     every order in fact_orders
 --   in window      bought from Jan 2017 and promised by Aug 31, 2018
---   judged         in window, not canceled or unavailable, delivery
---                  date known. Every broken-promise rate uses these.
+--   judged         in window, not canceled or unavailable, and not one
+--                  of the 8 orders marked delivered with no delivery
+--                  date. An order that never arrived is judged and
+--                  broken. Every broken-promise rate uses these.
 -- The low-review measures count every order in the window, canceled
 -- ones too, because a bad review of a canceled order is still part
 -- of the bad-review pile the Head of Customer Experience owns.
@@ -85,16 +91,16 @@ AS $$
       expr: source.route
       comment: "Seller state > customer state; single-seller orders only"
     - name: seller_location
-      expr: "CASE WHEN source.seller_count <> 1 THEN 'Several sellers' WHEN source.is_local_seller THEN 'Same state as customer' WHEN source.seller_state = 'SP' THEN 'Sao Paulo' ELSE 'Other state' END"
-      comment: "Where the seller is, seen from the customer"
+      expr: "CASE WHEN source.seller_count <> 1 THEN 'Several sellers or no item' WHEN source.is_local_seller THEN 'Same state as customer' WHEN source.seller_state = 'SP' THEN 'Sao Paulo' ELSE 'Other state' END"
+      comment: "Where the seller is, seen from the customer. 'Several sellers or no item' holds the orders without a single seller: several sellers, or no item line"
     - name: category
       expr: source.category
-      comment: "Product category (English) of the order's first item"
+      comment: "Product category of the order's first item, in English where a translation exists"
     - name: order_status
       expr: source.order_status
       comment: "Order status as recorded"
     - name: promise_outcome
-      expr: "CASE WHEN NOT source.is_judged THEN 'Not judged' WHEN source.is_broken = 1 THEN 'Broken' ELSE 'Kept' END"
+      expr: "CASE WHEN source.is_judged IS NOT TRUE THEN 'Not judged' WHEN source.is_broken = 1 THEN 'Broken' ELSE 'Kept' END"
       comment: "Broken or kept, for judged orders"
     - name: promise_bucket
       expr: source.promise_bucket
@@ -124,7 +130,7 @@ AS $$
       comment: "Broken promises divided by judged orders"
     - name: broken_rate_margin
       expr: "1.96 * SQRT(TRY_DIVIDE(TRY_DIVIDE(SUM(source.is_broken), SUM(CASE WHEN source.is_judged THEN 1 ELSE 0 END)) * (1 - TRY_DIVIDE(SUM(source.is_broken), SUM(CASE WHEN source.is_judged THEN 1 ELSE 0 END))), SUM(CASE WHEN source.is_judged THEN 1 ELSE 0 END)))"
-      comment: "95% margin of error of broken_rate, as a fraction (0.008 = plus or minus 0.8 points)"
+      comment: "95% margin of error of broken_rate, as a fraction (0.008 = plus or minus 0.8 points). It is 0 when no order or every order broke, so read it only on a few hundred orders or more"
     - name: broken_rate_if_3_days_later
       expr: TRY_DIVIDE(SUM(source.is_broken_if_3_days_later), SUM(CASE WHEN source.is_judged THEN 1 ELSE 0 END))
       comment: "The broken rate if every promise had been 3 days later"
@@ -142,7 +148,7 @@ AS $$
       comment: "Of those, orders whose promise was broken"
     - name: share_low_reviews_after_broken_promise
       expr: TRY_DIVIDE(SUM(CASE WHEN source.is_in_window AND source.is_broken = 1 THEN source.is_low_review ELSE 0 END), SUM(CASE WHEN source.is_in_window THEN source.is_low_review ELSE 0 END))
-      comment: "Share of 1-2 star reviews that follow a broken promise"
+      comment: "Of in-window orders whose latest review gives 1 or 2 stars, canceled ones included, the share that followed a broken promise"
     - name: avg_review_score
       expr: AVG(CASE WHEN source.is_judged THEN source.review_score END)
       comment: "Average latest review score of judged orders"
@@ -154,7 +160,7 @@ AS $$
       comment: "Average latest review score of broken promises"
     - name: share_late_reviewed_before_arrival
       expr: AVG(CASE WHEN source.is_broken = 1 THEN CAST(source.reviewed_before_arrival AS INT) END)
-      comment: "Of delivered broken promises with a review, the share answered before the parcel arrived"
+      comment: "Of delivered broken promises with a review, the share answered before the parcel arrived (answer time before delivery time)"
     - name: avg_score_late_before_arrival
       expr: AVG(CASE WHEN source.is_broken = 1 AND source.reviewed_before_arrival THEN source.review_score END)
       comment: "Average score of late orders reviewed before arrival"
@@ -163,13 +169,13 @@ AS $$
       comment: "Average score of late orders reviewed after arrival"
     - name: share_late_handed_over_by_deadline
       expr: AVG(CASE WHEN source.is_broken = 1 AND source.delivered_ts IS NOT NULL THEN CAST(source.handed_over_by_deadline AS INT) END)
-      comment: "Of delivered broken promises, the share the seller handed to the carrier by the deadline"
+      comment: "Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline (carrier time at or before the deadline time)"
     - name: avg_days_to_carrier
-      expr: AVG(CASE WHEN source.is_judged THEN source.days_to_carrier END)
-      comment: "Average days from purchase to the carrier, judged orders"
+      expr: AVG(CASE WHEN source.is_judged AND source.days_to_carrier IS NOT NULL AND source.days_carrier_to_customer IS NOT NULL THEN source.days_to_carrier END)
+      comment: "Average days from purchase to the carrier, judged orders that arrived and whose two gaps are both measured, so it stacks with avg_days_carrier_to_customer"
     - name: avg_days_carrier_to_customer
-      expr: AVG(CASE WHEN source.is_judged THEN source.days_carrier_to_customer END)
-      comment: "Average days from the carrier to the customer, judged orders"
+      expr: AVG(CASE WHEN source.is_judged AND source.days_to_carrier IS NOT NULL AND source.days_carrier_to_customer IS NOT NULL THEN source.days_carrier_to_customer END)
+      comment: "Average days from the carrier to the customer, on the same orders as avg_days_to_carrier"
     - name: median_delivery_days
       expr: PERCENTILE(CASE WHEN source.is_judged THEN source.delivery_days END, 0.5)
       comment: "Median days from purchase to delivery, judged orders"

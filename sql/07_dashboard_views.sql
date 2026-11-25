@@ -3,13 +3,18 @@
 -- File:     07_dashboard_views.sql
 -- Owner:    TODO name
 -- Purpose:  The small views the dashboards read besides the metric
---           view. Each one only picks, renames and rounds columns
---           of a Gold table, so the dashboards themselves never
---           calculate. Percentages arrive on a 0 to 100 scale for
---           tables, as in the Chord project.
+--           view. route_list and state_view pick, rename and round
+--           columns of a Gold table; region_fairness asks the metric
+--           view; deliveries_per_month and quarantine_summary count
+--           rows of Gold and of the quarantine. So the dashboards
+--           themselves never calculate. Percentages arrive on a 0 to
+--           100 scale for tables, as in the Chord project.
 -- Run:      After 06_checks.sql. Safe to rerun.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24
 --           (see docs/ai_usage.md).
+--           Revised with Claude, 2026-11-24, after an audit: two views
+--           now read the metric view and Gold dates, and route_list
+--           shows a dash for the margin of routes under 100 orders.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -27,7 +32,11 @@ SELECT
   orders,
   broken_orders,
   ROUND(100 * broken_rate, 1)   AS broken_pct,
-  ROUND(100 * margin, 1)        AS margin_pts,
+  -- The margin formula is not reliable on a handful of orders (it is
+  -- 0 when every order broke), so under 100 orders, the same floor as
+  -- the fix type, the table shows a dash instead. The column is text so
+  -- that the dashboard prints the dash, not the word "null".
+  CASE WHEN orders >= 100 THEN CAST(ROUND(100 * margin, 1) AS STRING) ELSE '–' END AS margin_pts,
   ROUND(excess_broken, 0)       AS excess_broken,
   ROUND(100 * rate_other, 1)    AS broken_pct_outside_busy_months,
   fix_type,
@@ -44,33 +53,32 @@ FROM olist.analytics.quarantine
 GROUP BY source_table, reason;
 
 -- Dashboard 2, page 2: deliveries recorded per month, every month in
--- the data. This is why the analysis stops in August 2018.
+-- the data. This is why the analysis stops in August 2018. It counts
+-- the delivery days stored in Gold, so the result does not depend on
+-- the time zone of the session that reads it.
 CREATE OR REPLACE VIEW olist.analytics.deliveries_per_month
 COMMENT 'Dashboard 2, trust page. Orders delivered per calendar month of delivery, all months in the data.'
 AS
-SELECT CAST(date_trunc('month', delivered_ts) AS DATE) AS delivery_month,
+SELECT CAST(date_trunc('month', delivered_date) AS DATE) AS delivery_month,
        COUNT(*) AS deliveries
-FROM olist.analytics.silver_orders
-WHERE delivered_ts IS NOT NULL
+FROM olist.analytics.fact_orders
+WHERE delivered_date IS NOT NULL
 GROUP BY 1;
 
 -- Dashboard 2, page 2: the fairness check. Broken-promise rate of
--- each customer region with its 95% margin.
+-- each customer region with its 95% margin. It asks the metric view,
+-- so the rate and its margin have one definition, not two.
 CREATE OR REPLACE VIEW olist.analytics.region_fairness
 COMMENT 'Dashboard 2, trust page. Broken-promise rate by customer region with its 95% margin, in points.'
 AS
 SELECT
-  s.region,
-  SUM(CASE WHEN f.is_judged THEN 1 ELSE 0 END)                       AS judged_orders,
-  SUM(f.is_broken)                                                   AS broken_orders,
-  ROUND(100 * SUM(f.is_broken) / SUM(CASE WHEN f.is_judged THEN 1 ELSE 0 END), 1) AS broken_pct,
-  ROUND(100 * 1.96 * sqrt(
-      (SUM(f.is_broken) / SUM(CASE WHEN f.is_judged THEN 1 ELSE 0 END))
-    * (1 - SUM(f.is_broken) / SUM(CASE WHEN f.is_judged THEN 1 ELSE 0 END))
-    / SUM(CASE WHEN f.is_judged THEN 1 ELSE 0 END)), 1)              AS margin_pts
-FROM olist.analytics.fact_orders AS f
-JOIN olist.analytics.dim_state AS s ON s.state = f.customer_state
-GROUP BY s.region;
+  customer_region                               AS region,
+  MEASURE(judged_orders)                        AS judged_orders,
+  MEASURE(broken_orders)                        AS broken_orders,
+  ROUND(100 * MEASURE(broken_rate), 1)          AS broken_pct,
+  ROUND(100 * MEASURE(broken_rate_margin), 1)   AS margin_pts
+FROM olist.analytics.delivery_metrics
+GROUP BY customer_region;
 
 -- Dashboard 3: one row per state, percentages on a 0 to 100 scale.
 CREATE OR REPLACE VIEW olist.analytics.state_view

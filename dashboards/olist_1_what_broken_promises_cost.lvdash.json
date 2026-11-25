@@ -257,7 +257,7 @@
                 "showTitle": true,
                 "title": "1-2 star reviews that follow a broken promise",
                 "showDescription": true,
-                "description": "Of all 1-2 star reviews"
+                "description": "Of in-window orders with a 1-2 star review"
               }
             }
           },
@@ -306,7 +306,7 @@
                 "showTitle": true,
                 "title": "Late orders reviewed before they arrived",
                 "showDescription": true,
-                "description": "1.65 stars, against 3.72 after"
+                "description": "No filter: 1.65 stars before, 3.72 after"
               }
             }
           },
@@ -456,7 +456,7 @@
                 "showTitle": true,
                 "title": "On time vs late, same delivery time",
                 "showDescription": true,
-                "description": "Orders that took the same time to arrive: late ones score lower in every band, so the score follows the promise, not only the speed."
+                "description": "With no filter, late orders score lower in every band of the same delivery time, so the score follows the promise, not only the speed."
               },
               "mark": {
                 "layout": "group"
@@ -475,7 +475,7 @@
             "name": "c_note",
             "multilineTextboxSpec": {
               "lines": [
-                "**Read with care.** Every link between promises and reviews is a correlation. The cheap test it points to: a delay notice with a new date, sent before the review survey to customers whose parcel will miss. A promise is judged when the order was bought from January 2017 and promised by August 31, 2018, and was not canceled. Each order counts its latest review once. Source: `olist.analytics.delivery_metrics`."
+                "**Read with care.** Every link between promises and reviews is a correlation. The cheap test it points to: a delay notice with a new date, sent before the review survey to customers whose parcel will miss. Judged orders: bought from January 2017 and promised by August 31, 2018, not canceled or unavailable, and not one of 8 marked delivered with no delivery date; an order that never arrived counts as broken. Each order counts its latest review once. Source: `olist.analytics.delivery_metrics`."
               ]
             }
           },
@@ -483,7 +483,7 @@
             "x": 0,
             "y": 13,
             "width": 6,
-            "height": 2
+            "height": 3
           }
         }
       ]

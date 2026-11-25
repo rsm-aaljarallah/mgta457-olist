@@ -8,8 +8,13 @@
 --           table, each with its reason.
 -- Run:      After 01_load_raw.sql. Rebuilds every Silver table from
 --           olist.raw. Safe to rerun. 06_checks.sql tests the result.
--- AI use:   Drafted with Claude (Anthropic), 2026-11-24
---           (see docs/ai_usage.md).
+-- AI use:   Drafted with Claude (Anthropic), 2026-11-24.
+--           Revised with Claude, 2026-11-24, after an audit: a missing status
+--           is set aside (rule 2), a repeated item line keeps a copy
+--           that passes the rules (rule 10), the Fernando de Noronha
+--           islands count as Brazil (rule 25), accents typed as a
+--           separate mark are removed (rule 21), comment counts
+--           corrected (see docs/ai_usage.md).
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -31,8 +36,9 @@
 -- cannot read instead of stopping the script, and a NULL is then
 -- caught by a quarantine rule.
 --
--- The team's answers to the three open questions in the data quality
--- log, as written in the design document:
+-- The answers we built to the three open questions in the data quality
+-- log (the design document states the first; the team confirms all
+-- three in its decisions document):
 --   1. Several reviews for one order: keep the latest (rule 18).
 --   2. Dates in an impossible order: keep the order, and leave out only
 --      the time we cannot measure (rules 6 to 8).
@@ -104,9 +110,11 @@ SELECT zip_prefix,
        ROUND(AVG(lng), 6) AS lng,
        COUNT(*)           AS distinct_points
 FROM olist.analytics.stg_geolocation
--- a rough box around Brazil; the 42 points outside it go to quarantine
-WHERE lat BETWEEN -33.8 AND 5.3
-  AND lng BETWEEN -73.99 AND -34.7
+-- a rough box around Brazil, plus the Fernando de Noronha islands, which
+-- lie east of the box and are Brazilian; the 27 distinct points outside
+-- both go to quarantine
+WHERE (lat BETWEEN -33.8 AND 5.3 AND lng BETWEEN -73.99 AND -34.7)
+   OR (lat BETWEEN -4.0 AND -3.7 AND lng BETWEEN -32.6 AND -32.3)
 GROUP BY zip_prefix;
 
 -- ------------------------------------------------------------
@@ -124,11 +132,17 @@ SELECT
   -- drop the leading zero of 23,995 customers and break the join
   c.customer_zip_code_prefix                                AS zip_prefix,
   c.customer_city                                           AS city,
-  -- rule 21: lower case without accents, so "são paulo" = "sao paulo"
-  translate(lower(trim(c.customer_city)),
-            'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc') AS city_match,
+  -- rule 21: lower case without accents, so "são paulo" = "sao paulo".
+  -- translate() handles accented letters; regexp_replace then drops an
+  -- accent typed as a separate mark (the regex \p{M}, written '\\p{M}'
+  -- because Spark SQL reads one backslash in a string as an escape),
+  -- and a ´ or ` used as an apostrophe becomes ' (chr(39)), as in
+  -- "santa barbara d'oeste".
+  regexp_replace(regexp_replace(translate(lower(trim(c.customer_city)),
+                   'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc'),
+                 '\\p{M}', ''), '[´`]', chr(39))         AS city_match,
   upper(trim(c.customer_state))                             AS state,
-  -- rule 26: 278 prefixes are not in geolocation; the customer stays
+  -- rule 26: 279 customers have a zip prefix with no location; they stay
   g.zip_prefix IS NULL                                      AS flag_zip_not_in_geolocation
 FROM olist.raw.customers AS c
 LEFT JOIN olist.analytics.silver_geolocation AS g
@@ -144,8 +158,10 @@ SELECT
   s.seller_id,
   s.seller_zip_code_prefix                                  AS zip_prefix,
   s.seller_city                                             AS city,
-  translate(lower(trim(s.seller_city)),
-            'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc') AS city_match,
+  -- rule 21, as for customers
+  regexp_replace(regexp_replace(translate(lower(trim(s.seller_city)),
+                   'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc'),
+                 '\\p{M}', ''), '[´`]', chr(39))         AS city_match,
   upper(trim(s.seller_state))                               AS state,
   g.zip_prefix IS NULL                                      AS flag_zip_not_in_geolocation
 FROM olist.raw.sellers AS s
@@ -225,9 +241,12 @@ SELECT
     OR t.purchase_ts >= TIMESTAMP '2018-09-01'                      AS flag_outside_full_months,
   CASE
     WHEN t.purchase_ts IS NULL THEN 'unreadable purchase date'      -- rule 1
-    WHEN t.order_status NOT IN ('delivered', 'shipped', 'canceled', 'unavailable',
+    -- rule 2. A missing status is unknown too: NOT IN alone lets a NULL
+    -- through, because NULL NOT IN (...) is neither true nor false.
+    WHEN t.order_status IS NULL
+      OR t.order_status NOT IN ('delivered', 'shipped', 'canceled', 'unavailable',
                                 'invoiced', 'processing', 'created', 'approved')
-      THEN 'unknown order status'                                   -- rule 2
+      THEN 'unknown order status'
   END AS quarantine_reason
 FROM typed AS t
 LEFT JOIN sellers_per_order AS s
@@ -266,8 +285,12 @@ SELECT
   COALESCE(t.shipping_limit_ts >= TIMESTAMP '2019-01-01', false) AS flag_deadline_after_2018,
   CASE
     WHEN t.price IS NULL OR t.price <= 0 THEN 'price missing, unreadable or not above 0'  -- rule 11
+    -- rule 10: of the copies of one item line, keep a copy that passes
+    -- rule 11 (a valid price), so a bad first copy cannot lose the item.
+    -- raw_row only breaks ties, so a rerun keeps the same copy.
     WHEN ROW_NUMBER() OVER (PARTITION BY t.order_id, t.order_item_id
-                            ORDER BY t.raw_row) > 1 THEN 'repeated item line'          -- rule 10
+                            ORDER BY CASE WHEN t.price > 0 THEN 0 ELSE 1 END, t.raw_row) > 1
+      THEN 'repeated item line'
   END AS quarantine_reason
 FROM typed AS t;
 
@@ -297,6 +320,7 @@ SELECT
   to_json(struct(p.*))                            AS raw_row,
   CASE
     WHEN p.payment_type = 'not_defined' THEN 'payment type not_defined'   -- rule 14
+    -- rule 14 also: an amount we cannot read is set aside
     WHEN TRY_CAST(p.payment_value AS DECIMAL(10, 2)) IS NULL THEN 'unreadable payment value'
   END AS quarantine_reason
 FROM olist.raw.order_payments AS p;
@@ -371,6 +395,8 @@ SELECT
   d.sdr_id,
   d.sr_id,
   try_to_timestamp(d.won_date)                              AS won_ts,
+  -- rule 28: a blank segment or lead type, like a blank origin, means
+  -- the field was not recorded
   COALESCE(d.business_segment, 'unknown')                   AS business_segment,
   COALESCE(d.lead_type, 'unknown')                          AS lead_type,
   d.lead_behaviour_profile,
@@ -412,15 +438,17 @@ UNION ALL
 SELECT 'geolocation', zip_prefix, 'location outside Brazil',
        to_json(struct(zip_prefix, lat, lng, city, state)), current_timestamp()
 FROM olist.analytics.stg_geolocation
-WHERE NOT (lat BETWEEN -33.8 AND 5.3 AND lng BETWEEN -73.99 AND -34.7)
+WHERE NOT ((lat BETWEEN -33.8 AND 5.3 AND lng BETWEEN -73.99 AND -34.7)
+           OR (lat BETWEEN -4.0 AND -3.7 AND lng BETWEEN -32.6 AND -32.3))
    OR lat IS NULL OR lng IS NULL;
 
 -- ------------------------------------------------------------
 -- 12. Quarantine summary. Expected today: 3 payments with type
---     not_defined and 33 geolocation points outside Brazil. The
---     profile counted 42 raw rows outside Brazil; 9 of them were
---     exact copies, removed before the quarantine. Removing those
---     points leaves one zip prefix with no location, so 279
+--     not_defined and 27 geolocation points outside Brazil. The
+--     profile counted 42 raw rows outside its rough box: 11 of them are
+--     the Fernando de Noronha islands, kept here, and 4 of the other 31
+--     are exact copies, so 27 distinct points are set aside. Removing
+--     them leaves one more zip prefix with no location, so 279
 --     customers (not the 278 of the profile) get flag_zip_not_in_geolocation.
 -- ------------------------------------------------------------
 SELECT source_table, reason, COUNT(*) AS row_count

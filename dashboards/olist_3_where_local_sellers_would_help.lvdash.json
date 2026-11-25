@@ -279,7 +279,7 @@
                   },
                   {
                     "fieldName": "pct_orders_from_other_state",
-                    "displayName": "% of orders from another state"
+                    "displayName": "% of single-seller orders from another state"
                   }
                 ]
               },
@@ -287,7 +287,7 @@
                 "showTitle": true,
                 "title": "States: orders per 100,000 residents vs broken-promise rate",
                 "showDescription": true,
-                "description": "Rio de Janeiro buys almost as much per resident as Sao Paulo, but has a quarter of its sellers per resident and gets 91.5% of its orders from another state. Population: IBGE 2018. The state and category filters do not apply here."
+                "description": "Each dot is a state: orders per 100,000 residents (IBGE 2018 population) in the 12 months to August 2018, against the broken-promise rate over the whole window. Rio buys 56.4 against 71.7 in Sao Paulo, with a quarter of Sao Paulo's sellers per resident. Only the region filter applies here."
               }
             }
           },
@@ -356,7 +356,7 @@
                 "showTitle": true,
                 "title": "Local vs Sao Paulo sellers: broken-promise rate",
                 "showDescription": true,
-                "description": "Pick one customer state above. For Rio: local sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%."
+                "description": "Pick one customer state above. Example, Rio de Janeiro with no other filter: local sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy months (4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several sellers or no item' holds the orders with no single seller."
               }
             }
           },
@@ -517,7 +517,7 @@
                 "showTitle": true,
                 "title": "Share of orders, sellers and funnel recruits, by state",
                 "showDescription": true,
-                "description": "The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and 61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%."
+                "description": "The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and 61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%. The region filter narrows the states shown; the state and category filters do not apply here."
               },
               "mark": {
                 "layout": "group"

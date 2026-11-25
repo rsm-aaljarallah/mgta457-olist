@@ -14,6 +14,9 @@
 --           and matched the Databricks run of 2026-11-17.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-17
 --           (see docs/ai_usage.md).
+--           Revised with Claude, 2026-11-24, after an audit: one
+--           comment corrected (query 8), and the repeated-reviews
+--           query also counts the orders whose scores differ (202).
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -100,10 +103,11 @@ UNION ALL SELECT 'ibge_states: id', COUNT(*), COUNT(DISTINCT id) FROM olist.raw.
 
 -- Repeated reviews. Expected: 789 review ids appear more than once
 -- (each time on a different order), 547 orders have two or more
--- reviews, and 768 orders have none.
+-- reviews, 202 of them with different scores, and 768 orders have none.
 SELECT
   (SELECT COUNT(*) FROM (SELECT review_id FROM olist.raw.order_reviews GROUP BY review_id HAVING COUNT(*) > 1)) AS review_ids_repeated,
   (SELECT COUNT(*) FROM (SELECT order_id FROM olist.raw.order_reviews GROUP BY order_id HAVING COUNT(*) > 1)) AS orders_with_2plus_reviews,
+  (SELECT COUNT(*) FROM (SELECT order_id FROM olist.raw.order_reviews GROUP BY order_id HAVING COUNT(DISTINCT review_score) > 1)) AS orders_with_different_scores,
   (SELECT COUNT(*) FROM olist.raw.orders o
     WHERE NOT EXISTS (SELECT 1 FROM olist.raw.order_reviews r WHERE r.order_id = o.order_id)) AS orders_without_review;
 
@@ -290,7 +294,9 @@ FROM (SELECT explode(r.series) AS s
 --    geolocation rows spell the city with accents (so "sao paulo"
 --    and "são paulo" both appear); 8,556 zip prefixes carry two or
 --    more city spellings; 8 zip prefixes sit in two states; 42
---    geolocation points fall outside Brazil's borders (a rough box).
+--    geolocation rows fall outside a rough box around Brazil (11 of
+--    them are the Fernando de Noronha islands, which are Brazilian;
+--    Silver keeps those).
 -- ------------------------------------------------------------
 SELECT
   (SELECT COUNT(*) FROM olist.raw.customers WHERE length(customer_zip_code_prefix) <> 5) AS customer_zip_not_5_characters,

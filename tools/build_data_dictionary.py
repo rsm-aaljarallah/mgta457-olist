@@ -6,7 +6,7 @@ that does. A column with no meaning below is listed as "(no description)", and t
 it, so a new column cannot slip through undocumented.
 
 Run from the repo root:  python3 tools/build_data_dictionary.py
-(needs /Users/aj/Documents/BI/tools/run_dbx.py and the Databricks CLI profile "chord")
+(needs tools/run_dbx.py, in this folder, and the Databricks CLI profile "chord")
 
 AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's script
 (see docs/ai_usage.md).
@@ -14,7 +14,7 @@ AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's sc
 import os
 import sys
 
-sys.path.insert(0, "/Users/aj/Documents/BI/tools")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import run_dbx  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +43,7 @@ MEANING = {
     "area": "Region with the Southeast split into Rio de Janeiro and the rest.",
     "population_2018": "IBGE 2018 estimated resident population.",
     "city": "City as written in the source.",
-    "city_match": "City in lower case without accents, for matching.",
+    "city_match": "City in lower case without accents, with ´ or ` read as an apostrophe, for matching.",
     "lat": "Average latitude of the prefix's distinct points.",
     "lng": "Average longitude of the prefix's distinct points.",
     "distinct_points": "Distinct location points averaged for the prefix.",
@@ -117,7 +117,7 @@ MEANING = {
     "item_count": "Item lines in the order.",
     "seller_count": "Distinct sellers in the order.",
     "is_in_window": "Bought from 2017-01-01 and promised by 2018-08-31.",
-    "is_judged": "In window, not canceled or unavailable, delivery date known. Every broken-promise rate counts these.",
+    "is_judged": "In window, not canceled or unavailable, and not one of the 8 orders marked delivered with no delivery date. An order that never arrived is judged. Every broken-promise rate counts these.",
     "is_broken": "1 when a judged order was not delivered by the end of the promised day, else 0.",
     "is_broken_if_3_days_later": "1 when it would still be broken with a promise 3 days later.",
     "days_vs_promise": "Delivery day minus promised day: negative early, positive late.",
@@ -161,11 +161,11 @@ MEANING = {
     "margin_other": "95% margin of `rate_other`.",
     "excess_busy": "Excess in busy months, against the national busy-month rate.",
     "excess_other": "Excess in other months, against the national rate there.",
-    "needs_lasting_fix": "`rate_other` minus its margin is above `national_rate_other`.",
-    "needs_busy_season_plan": "`excess_busy` is larger than `excess_other`.",
+    "needs_lasting_fix": "The lasting-fix test alone: `rate_other` minus `margin_other` is above `national_rate_other`. `fix_type` also needs 100 orders.",
+    "needs_busy_season_plan": "The busy-season test alone: `excess_busy` is larger than `excess_other`. `fix_type` also needs 100 orders.",
     "excess_rank": "Rank by `excess_broken`, largest first.",
-    "fix_type": "Both, Lasting fix, Busy-season plan, Watch, or No fix needed.",
-    "first_step": "Suggested first step for the fix type.",
+    "fix_type": "No fix needed (no excess); Watch (excess but fewer than 100 orders, or neither test met); otherwise Both, Lasting fix or Busy-season plan.",
+    "first_step": "Suggested first step for the fix type; empty when no fix is needed.",
     "customer_region": "Customer region.",
     # gold_states
     "orders_12m": "Orders bought Sep 2017 to Aug 2018, any status.",
@@ -182,7 +182,7 @@ MEANING = {
     "broken_pct_outside_busy_months": "Broken rate outside busy months, percent.",
     "orders_per_100k": "Orders per 100,000 residents, 12 months to Aug 2018.",
     "active_sellers_per_million": "Active sellers per million residents.",
-    "pct_orders_from_other_state": "Percent of orders shipped from another state.",
+    "pct_orders_from_other_state": "Percent of the state's single-seller orders in the 12 months shipped from another state.",
     "pct_of_orders": "Percent of all orders, 12 months.",
     "pct_of_sellers": "Percent of all sellers.",
     "pct_of_funnel_recruits": "Percent of funnel sellers who sold.",
@@ -216,6 +216,7 @@ MEANING_BY_TABLE = {
     ("gold_routes", "broken_rate"): "The route's broken rate.",
     ("route_list", "orders"): "Judged single-seller orders on the route.",
     ("route_list", "excess_broken"): "Excess broken promises, rounded.",
+    ("route_list", "margin_pts"): "95% margin in percentage points, as text; a dash under 100 orders, where the formula is not reliable.",
     ("region_fairness", "judged_orders"): "Judged orders of the region's customers.",
     ("silver_states", "region"): "IBGE region in English.",
     ("stg_geolocation", "state"): "State as written in geolocation (not used; rule 27).",

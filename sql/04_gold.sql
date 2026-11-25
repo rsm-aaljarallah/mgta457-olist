@@ -15,8 +15,10 @@
 --           rerun. Then 05_metric_view.sql and 06_checks.sql.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24. Every
 --           definition was tested against the numbers in
---           docs/design_doc.md before it was written here
---           (see docs/ai_usage.md).
+--           docs/design_doc.md before it was written here.
+--           Revised with Claude, 2026-11-24, after an audit: routes under
+--           100 orders get no fix type, the flags can never be
+--           empty (see docs/ai_usage.md).
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -28,7 +30,8 @@
 --                 passed inside the data (assumption A7, rule 9).
 --   Judged        in window, not canceled or unavailable, and not one
 --                 of the 8 delivered orders without a delivery date
---                 (rule 4). 95,901 orders.
+--                 (rule 4). 95,901 orders. An order that never arrived
+--                 is judged: its promise passed, and it is broken.
 --   Broken        judged, and not delivered by the end of the promised
 --                 day: delivered on a later calendar day (rule 3), or
 --                 not delivered at all.
@@ -192,9 +195,11 @@ base AS (
     o.flag_carrier_before_approval,
     o.flag_delivered_before_carrier,
     o.flag_outside_full_months,
-    -- In window: see the top of this file
-    o.purchase_ts >= TIMESTAMP '2017-01-01'
-      AND o.promised_date <= DATE '2018-08-31'     AS is_in_window
+    -- In window: see the top of this file. COALESCE: an order whose
+    -- promised date could not be read is out of the window, never empty
+    -- (check 23 catches such a date).
+    COALESCE(o.purchase_ts >= TIMESTAMP '2017-01-01'
+             AND o.promised_date <= DATE '2018-08-31', false) AS is_in_window
   FROM olist.analytics.silver_orders AS o
   JOIN olist.analytics.silver_customers AS c ON c.customer_id = o.customer_id
   LEFT JOIN items    AS it ON it.order_id = o.order_id
@@ -207,9 +212,9 @@ judged AS (
   SELECT
     b.*,
     -- Judged: see the top of this file
-    b.is_in_window
-      AND b.order_status NOT IN ('canceled', 'unavailable')
-      AND NOT b.flag_delivered_without_date        AS is_judged
+    COALESCE(b.is_in_window
+             AND b.order_status NOT IN ('canceled', 'unavailable')
+             AND NOT b.flag_delivered_without_date, false) AS is_judged
   FROM base AS b
 )
 SELECT
@@ -239,7 +244,7 @@ SELECT
   -- score barely moves (4.20 to 4.32); late orders get finer groups
   -- because the score drops fast. The _order column sorts the axis.
   CASE
-    WHEN j.delivered_ts IS NULL                                    THEN NULL
+    WHEN j.delivered_ts IS NULL OR j.promised_date IS NULL         THEN NULL
     WHEN datediff(j.delivered_date, j.promised_date) <= -15        THEN '15+ days early'
     WHEN datediff(j.delivered_date, j.promised_date) <= -8         THEN '8-14 days early'
     WHEN datediff(j.delivered_date, j.promised_date) <= -1         THEN '1-7 days early'
@@ -250,7 +255,7 @@ SELECT
     ELSE '15+ days late'
   END                                                            AS promise_bucket,
   CASE
-    WHEN j.delivered_ts IS NULL                                    THEN NULL
+    WHEN j.delivered_ts IS NULL OR j.promised_date IS NULL         THEN NULL
     WHEN datediff(j.delivered_date, j.promised_date) <= -15        THEN 1
     WHEN datediff(j.delivered_date, j.promised_date) <= -8         THEN 2
     WHEN datediff(j.delivered_date, j.promised_date) <= -1         THEN 3
@@ -348,6 +353,15 @@ LEFT JOIN olist.analytics.gold_months AS g
 --      busy-season   its excess in busy months, against the national
 --                    busy-month rate, is larger than its excess in the
 --                    other months, against the national rate there
+--      100 orders    a route with excess but fewer than 100 orders gets
+--                    no fix type ('Watch'): below 100 orders one order
+--                    moves its rate by a point or more, so the two tests
+--                    cannot tell a real problem from chance. The two
+--                    needs_ columns keep the raw test results.
+--    Only a route with excess broken promises gets a fix type: a route
+--    that breaks fewer promises overall than the national rate predicts
+--    is 'No fix needed', even if one test passes on its own (1 route
+--    passes the lasting-fix test and 172 the busy-season test that way).
 --    The fix type compares busy months with the rest of the year, so
 --    it ignores the dashboard's month filter (design doc, filters).
 -- ------------------------------------------------------------
@@ -407,6 +421,7 @@ SELECT
   ROW_NUMBER() OVER (ORDER BY l.excess_broken DESC, l.route) AS excess_rank,
   CASE
     WHEN l.excess_broken <= 0                             THEN 'No fix needed'
+    WHEN l.orders < 100                                   THEN 'Watch'
     WHEN l.needs_lasting_fix AND l.needs_busy_season_plan THEN 'Both'
     WHEN l.needs_lasting_fix                              THEN 'Lasting fix'
     WHEN l.needs_busy_season_plan                         THEN 'Busy-season plan'
@@ -414,10 +429,11 @@ SELECT
   END AS fix_type,
   CASE
     WHEN l.excess_broken <= 0                             THEN NULL
-    WHEN l.needs_lasting_fix AND l.needs_busy_season_plan THEN 'Review the carrier and transit days on this route, and book extra capacity before busy months'
+    WHEN l.orders < 100                                   THEN 'Too few orders to tell; check again next quarter'
+    WHEN l.needs_lasting_fix AND l.needs_busy_season_plan THEN 'Review carrier and transit days; add busy-month capacity'
     WHEN l.needs_lasting_fix                              THEN 'Review the carrier and transit days on this route'
     WHEN l.needs_busy_season_plan                         THEN 'Book extra carrier capacity before busy months'
-    ELSE 'Too few orders to tell; check again next quarter'
+    ELSE 'Neither test met; check again next quarter'
   END AS first_step,
   cs.region AS customer_region
 FROM labeled AS l
@@ -431,12 +447,13 @@ JOIN olist.analytics.dim_state AS cs ON cs.state = l.customer_state;
 --    full year compares fairly with the 2018 population
 --    (assumption A5). The broken rate uses judged orders, as
 --    everywhere else.
---      active seller   sold at least one order in those 12 months
+--      active seller   had at least one order in those 12 months, of
+--                      any status, like the demand measures
 --      funnel seller   came through the marketing funnel and sold at
 --                      least one order (380 of the 842 deals)
 -- ------------------------------------------------------------
 CREATE OR REPLACE TABLE olist.analytics.gold_states
-COMMENT 'Gold. One row per state: 12-month orders per 100,000 residents, active sellers per million, share of orders from another state, broken rate, and shares of orders, sellers and funnel recruits.'
+COMMENT 'Gold. One row per state: 12-month orders per 100,000 residents, active sellers per million, share of single-seller orders from another state, broken rate, and shares of orders, sellers and funnel recruits.'
 AS
 WITH last12 AS (
   SELECT * FROM olist.analytics.fact_orders
@@ -446,7 +463,7 @@ cust AS (
   SELECT customer_state AS state,
          COUNT(*)                                                     AS orders_12m,
          SUM(CASE WHEN seller_count = 1 AND NOT is_local_seller THEN 1 ELSE 0 END)
-           / SUM(CASE WHEN seller_count = 1 THEN 1 ELSE 0 END)        AS share_from_other_state_12m
+           / NULLIF(SUM(CASE WHEN seller_count = 1 THEN 1 ELSE 0 END), 0) AS share_from_other_state_12m
   FROM last12 GROUP BY customer_state
 ),
 active AS (

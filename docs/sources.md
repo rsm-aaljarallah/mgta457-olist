@@ -12,18 +12,18 @@ Three datasets from two publishers: 13 files, loaded into 13 tables in `olist.ra
 
 | Source | Link | License |
 | --- | --- | --- |
-| 1 | https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce | CC BY-NC-SA 4.0, as listed on OpenML (datasets 46104 to 46106); confirm on the Kaggle page when downloading |
-| 2 | https://www.kaggle.com/datasets/olistbr/marketing-funnel-olist | Same as source 1; confirm on the Kaggle page |
+| 1 | https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce | CC BY-NC-SA 4.0, as the Kaggle dataset page lists it (checked 2026-11-24) |
+| 2 | https://www.kaggle.com/datasets/olistbr/marketing-funnel-olist | CC BY-NC-SA 4.0, as the Kaggle dataset page lists it (checked 2026-11-24) |
 | 3 | `sh tools/fetch_ibge.sh <folder>` calls the two IBGE API addresses written in that script | IBGE public data, free to reuse with credit to IBGE |
 
 CC BY-NC-SA allows non-commercial use such as coursework, as long as we credit Olist and share anything derived from the data under the same terms.
 
 ## The files we loaded, and how we know they are the originals
 
-Kaggle needs a signed-in account to download. Our first copies came from public mirrors:
+Our first copies came from public mirrors:
 
 - The 9 marketplace files are the copy at huggingface.co/datasets/bulutttt/olist-raw-data. Two other independent uploads, aviahYadler/Olist_Ecommerce_Dataset and MafiaAzulBr/olistcsv, are identical to it byte for byte.
-- The 2 funnel files come from github.com/Catherinedataa/Olist-Sales-Funnel-Analysis. Only one copy was checked, so these are the weakest link.
+- The 2 funnel files come from github.com/Catherinedataa/Olist-Sales-Funnel-Analysis. Only one copy was checked at first; the Kaggle check below settled it.
 - **Checked against Kaggle on 2026-11-24.** Both datasets were downloaded from the Kaggle links above and the IBGE files were fetched again. All 13 SHA-256 hashes match the table below, so the tables in `olist.raw` hold the Kaggle files and nothing needs reloading.
 
 | Folder | File | Rows | SHA-256 |
@@ -42,6 +42,6 @@ Kaggle needs a signed-in account to download. Our first copies came from public 
 | ibge | population_2018.json | 27 states | `9087c2bed588c123b30edcb6e1f579f62d25ea9cbed92f8bd91afc84651d0576` |
 | ibge | states.json | 27 states | `7ca1368dea3af83cba1af84ae8a7e88f1173c97586831d086cc8b3c1ba9c6596` |
 
-The IBGE files were downloaded on 2026-11-17. IBGE can revise its estimates, so a later download may differ; the 2018 total we loaded is 208,494,900 people.
+The IBGE files were downloaded on 2026-11-17 and again on 2026-11-24, with the same hashes. IBGE can revise its estimates, so a later download may differ; the 2018 total we loaded is 208,494,900 people.
 
 To compute a hash on a Mac: `shasum -a 256 <file>`.

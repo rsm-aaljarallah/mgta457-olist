@@ -10,8 +10,8 @@ The talk for `deliverables/olist_presentation.pptx`: 11 slides, about 13.5 minut
 | 4 | Four traps the data set for us | Ruby | 1.5 |
 | 5 | Broken promises draw a third of the bad reviews | Merna | 1.5 |
 | 6 | One route breaks more promises than the next nine together | AJ | 1.5 |
-| 7 | Two kinds of fix, and promising later is not one of them | AJ | 1.5 |
-| 8 | Rio buys like Sao Paulo but has a quarter of its sellers | Merna | 1.5 |
+| 7 | Two kinds of fix, and a promise 3 days later is not one | AJ | 1.5 |
+| 8 | Rio: high demand, few sellers per resident | Merna | 1.5 |
 | 9 | Can we trust it? Every check is on the dashboard | Ruby | 1.25 |
 | 10 | What Olist should do next | AJ | 1.0 |
 | 11 | What the data cannot tell us | Merna | 0.75 |
@@ -28,31 +28,31 @@ Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
 
 ## 3. From 13 files to three dashboards
 
-**Ruby, 1.25 min.** This is the pipeline, left to right. Bronze holds the 13 files exactly as downloaded, every column as text, and we checked their hashes against Kaggle. Silver applies 31 cleaning rules and sets aside the rows it cannot trust. Gold is a star schema: one fact row per order, one per item, and four dimensions. A metric view holds every rate, so a dashboard filter recalculates it instead of reading a stored number. The dashboards do no calculation at all.
+**Ruby, 1.25 min.** This is the pipeline, left to right. Bronze holds the 13 files exactly as downloaded, every CSV column as text, and we checked their hashes against Kaggle and IBGE. We apply 31 cleaning rules and set aside the rows we cannot trust. Gold is a star schema: one fact row per order, one per item, and four dimensions. A metric view holds the rates a filter must recalculate; the route and state rates are stored in Gold and checked against it on every build. The dashboards do no calculation at all.
 
 ## 4. Four traps the data set for us
 
-**Ruby, 1.5 min.** Four problems would have changed our answer. First, the promised date has no time of day, so comparing timestamps calls 1,292 on-time deliveries late; we compare days. Second, joins on the wrong grain: items joined to payments add 4.6 percent to sales, and customers joined to locations turn 99 thousand rows into 15 million. Third, 547 orders have more than one review; we keep the latest, so no order is counted twice. Fourth, deliveries stop being recorded after August 2018, so a promise made for September would look broken. We stop the window at August 31.
+**Ruby, 1.5 min.** Four problems would have changed our answer. First, the promised date has no time of day, so comparing timestamps calls 1,292 on-time deliveries late; we compare days. Second, joins on the wrong grain: items joined to payments add 4.6 percent to item value, and customers joined to locations turn 99 thousand rows into 15 million. Third, 547 orders have more than one review; we keep the latest, so no order is counted twice. Fourth, deliveries stop being recorded after August 2018, so a promise made for September would look broken. We stop the window at August 31.
 
 ## 5. Broken promises draw a third of the bad reviews
 
-**Merna, 1.5 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of orders broke their promise, but they drew 36.7 percent of the one and two star reviews. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders that took the same time to arrive: the late ones score lower in every band, so customers react to the broken promise, not only to speed. And 70 percent of late customers wrote their review before the parcel arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
+**Merna, 1.5 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of the orders we judge broke their promise, but they make up 36.7 percent of the orders in our window with a one or two star review, canceled ones included. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders delivered in the same week: the late ones score lower in every band, so customers react to the broken promise, not only to speed. And 70 percent of the late parcels with a review were reviewed before they arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
 
 ## 6. One route breaks more promises than the next nine together
 
 **AJ, 1.5 min.** Dashboard 2 is for the Head of Logistics, and it ends in a ranked list. We rank routes, seller state to customer state, by excess broken promises: how many more than the national rate predicts. Sao Paulo to Rio de Janeiro comes first, 17.1 percent broken, 678 above expected. That is more than the next nine routes together, 637. Five of the top ten go into the Northeast. Each route also gets a fix type from a rule in SQL, which the next slide explains.
 
-## 7. Two kinds of fix, and promising later is not one of them
+## 7. Two kinds of fix, and a promise 3 days later is not one
 
-**AJ, 1.5 min.** Three months were different: November 2017, February and March 2018. They hold 22 percent of orders but 43 percent of broken promises, so some routes need a busy-season plan. But the Northeast breaks promises in ordinary months too, so some routes need a lasting fix. Sao Paulo to Rio needs both. The obvious idea, promising later dates, only takes the rate from 8.6 to 6.6 percent. And 72 percent of late parcels reached the carrier by the seller's deadline, so most of the delay happens after the handover.
+**AJ, 1.5 min.** Three months were different: November 2017, February and March 2018. They hold 22 percent of orders but 43 percent of broken promises, so some routes need a busy-season plan. But the Northeast breaks promises in ordinary months too, so some routes need a lasting fix. Sao Paulo to Rio needs both. The obvious idea, promising three days later, only takes the rate from 8.6 to 6.6 percent. And 72 percent of the late parcels from one seller reached the carrier by the seller's deadline, so most of the delay happens after the handover.
 
-## 8. Rio buys like Sao Paulo but has a quarter of its sellers
+## 8. Rio: high demand, few sellers per resident
 
-**Merna, 1.5 min.** Dashboard 3 is for the Head of Seller Acquisition. Using IBGE's population, Rio buys 56 orders per hundred thousand residents, close to Sao Paulo's 72, but it has 8.5 active sellers per million against 35, and 91.5 percent of its orders come from another state. When a Rio customer buys from a Rio seller, 7.7 percent of promises break and the median delivery takes 5 days, against 17.1 percent and 13 days from Sao Paulo. Yet the funnel recruits where sellers already are: Rio got only 6.8 percent of the recruits who sold. Local sellers may sell different products, so a pilot has to prove the speed.
+**Merna, 1.5 min.** Dashboard 3 is for the Head of Seller Acquisition. Using IBGE's population, Rio buys 56 orders per hundred thousand residents, the third highest after Sao Paulo's 72 and the Federal District's 57, but it has 8.5 active sellers per million against 35, and 91.5 percent of its single-seller orders come from another state. When a Rio customer buys from a Rio seller, 7.7 percent of promises break and the median delivery takes 5 days, against 17.1 percent and 13 days from Sao Paulo. Most of that gap comes from the busy months; in ordinary months it is 8.7 against 10.0 percent, but local sellers are still much faster. Yet the funnel recruits where sellers already are: Rio got only 6.8 percent of the recruits who sold. Local sellers may sell different products, so a pilot has to prove the speed.
 
 ## 9. Can we trust it? Every check is on the dashboard
 
-**Ruby, 1.25 min.** Dashboard 2 has a second page, Can we trust it. Twenty-one pipeline checks run on every build: every raw row lands in Silver or in quarantine, every key holds, no join inflates money, and the metric view agrees with the fact table. All pass. Only 3 of 415 thousand order rows were set aside. A view recomputes all 39 numbers of our design document from Gold, and all match. The same page shows the fairness check: Northeast customers get worse service, 15.6 against 7.8 percent, and we show that gap with its margin instead of hiding it.
+**Ruby, 1.25 min.** Dashboard 2 has a second page, Can we trust it. Twenty-four pipeline checks run on every build: every order, item, payment and review row lands in Silver or in quarantine, every key holds, no join inflates money, the stored rates agree with the metric view, and the days are the days written in the files. All pass. Only 3 of 415 thousand order, item, payment and review rows were set aside. A view recomputes all 56 results printed in our design document from Gold, and all match. The same page shows the fairness check: Northeast customers get worse service, 15.6 against 7.8 percent, and we show that gap with its margin instead of hiding it.
 
 ## 10. What Olist should do next
 
@@ -60,4 +60,4 @@ Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
 
 ## 11. What the data cannot tell us
 
-**Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And the data ends in August 2018, so we deliver a pipeline a monthly refresh would rerun, not a list for today. Thank you; we are happy to take questions.
+**Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And deliveries stop being recorded after August 2018, so we deliver a pipeline a monthly refresh would rerun, not a list for today. Thank you; we are happy to take questions.

@@ -1,6 +1,6 @@
 # MGTA 457 team project: Olist marketplace
 
-**Status, 2026-11-24: ready to submit.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 21 pipeline checks pass, and all 39 headline numbers of the design document come back exactly from Gold. The three dashboards are published, and the design document, final documentation and presentation are in `deliverables/`.
+**Status, 2026-11-24: ready to submit.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 24 pipeline checks pass, and all 56 results printed in the design document come back exactly from Gold. The three dashboards are published, and the design document, final documentation and presentation are in `deliverables/`. An audit on 2026-11-24 rechecked everything; see "Audit of 2026-11-24" below.
 
 ## What we submit
 
@@ -36,11 +36,11 @@ What `olist.analytics` holds:
 
 | Layer | Objects |
 | --- | --- |
-| Silver (`03_silver.sql`) | `silver_orders`, `silver_order_items`, `silver_order_payments`, `silver_order_reviews`, `silver_customers`, `silver_sellers`, `silver_products`, `silver_geolocation`, `silver_leads`, `silver_closed_deals`, `silver_states`; `quarantine` (every row set aside, with its reason); the `stg_` views that hold the rules |
+| Silver (`03_silver.sql`) | `silver_orders`, `silver_order_items`, `silver_order_payments`, `silver_order_reviews`, `silver_customers`, `silver_sellers`, `silver_products`, `silver_geolocation`, `silver_leads`, `silver_closed_deals`, `silver_states`; `quarantine` (every row set aside, with its reason); the `stg_` views that type the rows and apply the quarantine rules |
 | Gold (`04_gold.sql`) | `fact_orders` (one row per order), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures) |
-| Metric view (`05_metric_view.sql`) | `delivery_metrics`: every rate the dashboards show, recalculated for any filter |
+| Metric view (`05_metric_view.sql`) | `delivery_metrics`: every rate a dashboard filter recalculates |
 | Dashboard views (`07_dashboard_views.sql`) | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` |
-| Checks (`06_checks.sql`) | `pipeline_checks` (every row should say PASS), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's numbers recomputed from Gold) |
+| Checks (`06_checks.sql`) | `pipeline_checks` (24 checks; every row should say PASS), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's results recomputed from Gold) |
 
 ## Documents and how they are built
 
@@ -50,13 +50,16 @@ The Word and PowerPoint files are built from the markdown and scripts in this re
 | --- | --- | --- |
 | `deliverables/olist_design_document.docx` | `docs/design_doc.md`, sketches from `docs/dashboard_plan.json` | `python3 tools/draw_sketches.py docs/dashboard_plan.json`, then the first command at the top of `tools/export_word.py` |
 | `deliverables/olist_final_documentation.docx` | `docs/project_overview.md`, `lineage.md`, `metric_dictionary.md`, `data_dictionary.md`, `data_quality_log.md`, `ai_usage.md` | `python3 tools/build_data_dictionary.py` and `python3 tools/draw_lineage.py`, then `python3 tools/export_word.py deliverables/olist_final_documentation.docx "Olist Delivery Promise: Final Project Documentation" "MGTA 457 Business Intelligence Systems, Fall 2026. Team: AJ, Ruby, Merna." docs/project_overview.md docs/lineage.md docs/metric_dictionary.md docs/data_dictionary.md docs/data_quality_log.md docs/ai_usage.md` |
-| `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=/Users/aj/Documents/BI/tools/deck/node_modules node tools/deck/build_deck.js` |
+| `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=<folder with pptxgenjs> OLIST_THEME_SCRIPT=<theme helper> node tools/deck/build_deck.js` |
+| `docs/presentation_outline.md` | `tools/deck/script.json` | `python3 tools/deck/build_outline.py` |
 
 The dashboard screenshots in `docs/img/dash_*.png` were taken from the published dashboards on 2026-11-24.
 
+Two paths depend on the machine: `NODE_PATH` must point at a folder where `pptxgenjs` is installed, and the deck's colour theme comes from a helper outside this repository (set `OLIST_THEME_SCRIPT` to it; without it the deck is written without the theme step).
+
 ## How to run it
 
-Run each SQL file in the Databricks SQL editor, in order, or with the CLI.
+Run each SQL file in the Databricks SQL editor, in order, or from this folder with `python3 tools/run_dbx.py sql/<file>.sql` (Databricks CLI profile `chord`).
 
 1. `sql/00_setup.sql`: creates the catalog, the schemas and the volume.
 2. Upload the files: `sh tools/fetch_ibge.sh <ibge folder>`, then `sh tools/upload_raw.sh <csv folder> <ibge folder>`.
@@ -79,11 +82,21 @@ Published in the Databricks workspace on 2026-11-24 and checked page by page in 
 | Olist 2 - Where promises break | Head of Logistics | 2: the routes, and "Can we trust it" |
 | Olist 3 - Where local sellers would help | Head of Seller Acquisition | 1 |
 
-They read only the metric view `delivery_metrics` and the views of `07_dashboard_views.sql`, so they do no calculation. Published dashboards show cached results until someone clicks refresh.
+They read only the metric view `delivery_metrics`, the views of `07_dashboard_views.sql` and two check views, so they do no calculation. Published dashboards show cached results until someone clicks refresh. Only AJ's account and the workspace admins can open them: share them from the dashboard's Share button, or import the `.lvdash.json` files into another workspace.
 
 ## Design document numbers
 
-`design_doc_numbers` recomputes the 39 headline numbers of the design document from Gold; all 39 match. Three were corrected on 2026-11-24, when the Gold build replaced the planning queries: the excess of the next nine routes (629 to 637), the median month's rate (6.85% to 6.89%) and the busy months' share of orders (22.2% to 22.1%). No conclusion changed.
+`design_doc_numbers` recomputes from Gold every result the design document prints, 56 numbers; all 56 match. The facts about the raw data come from `sql/02_profile_bronze.sql`, whose expected values are written in its comments. Three numbers were corrected on 2026-11-24, when the Gold build replaced the planning queries: the excess of the next nine routes (629 to 637), the median month's rate (6.85% to 6.89%) and the busy months' share of orders (22.2% to 22.1%). No conclusion changed.
+
+## Audit of 2026-11-24
+
+Every number was checked a second way before submission:
+
+- The 13 files on disk were compared with `olist.raw`, and every order of `fact_orders` was rebuilt from the CSV files with pandas, without the SQL: all 99,441 orders agree on all 18 fields compared. The months, routes and states tables also reproduce from the files.
+- The metric view was compared with SQL written out by hand under seven filter combinations, and the deployed views, metric view and dashboards with the files in this repository.
+- Every cleaning rule was run on made-up bad rows to see it fire.
+
+What changed: routes with fewer than 100 orders no longer get a fix type (they are "Watch"); the two "where the days go" averages now use the same orders; a missing order status is set aside; the Fernando de Noronha islands, which are Brazilian, are no longer set aside as points outside Brazil; city matching also removes an accent typed as a separate mark; six checks were made stricter and three added (stored rates agree with the metric view, typing lost nothing, days are the days written in the files); 17 more design-document numbers are recomputed by `design_doc_numbers`; and wording that did not match the build was corrected. No headline number changed. The audit also found that, for Rio customers, most of the local sellers' edge in broken promises comes from the busy months; the design document now says so. `docs/metric_dictionary.md` shows how the answer holds up under other definitions.
 
 ## What the profile found
 
@@ -92,10 +105,14 @@ All written up in [docs/data_quality_log.md](docs/data_quality_log.md):
 - **Repeated rows.** 261,831 exact duplicate location rows.
 - **Repeated reviews.** One review attached to several orders, and 547 orders with more than one review.
 - **Joins that multiply rows.** Joining items to payments adds 4.6% to item value. Joining customers to locations turns 99,441 customers into 15 million rows.
-- **Zip codes.** 23,995 zip codes lose their leading zero if read as numbers.
+- **Zip codes.** 23,995 customers have a zip prefix starting with 0, which a number type would drop.
 - **Dates in an impossible order.** For example, 1,359 orders reached the carrier before they were approved.
 - **A data window that ends early.** The orders stop in August 2018, two months before the last date.
 - **Codes that differ by source.** IBGE names states by number, Olist by letters.
+
+## References
+
+[docs/references/](docs/references/README.md) keeps the two guides we designed against: the ONS guide to choosing a chart type, and Kimball's article on fact and dimension tables. Its notes check every dashboard chart and the Gold layer against them, and name the two places where we depart on purpose.
 
 ## Rules carried over from the Chord project
 

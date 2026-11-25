@@ -6,6 +6,7 @@ olist_data/
 # Local clutter
 .DS_Store
 __pycache__/
+node_modules/
 *.pyc
 .venv/
 

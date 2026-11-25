@@ -290,10 +290,6 @@
                       "expression": "`excess_broken`"
                     },
                     {
-                      "name": "broken_pct_outside_busy_months",
-                      "expression": "`broken_pct_outside_busy_months`"
-                    },
-                    {
                       "name": "fix_type",
                       "expression": "`fix_type`"
                     },
@@ -381,10 +377,6 @@
                         "type": "tooltip",
                         "tooltipTemplate": "{{ @ }}"
                       }
-                    },
-                    "format": {
-                      "type": "numeral.js",
-                      "format": "0.0"
                     }
                   },
                   {
@@ -400,21 +392,6 @@
                     "format": {
                       "type": "numeral.js",
                       "format": "0,0"
-                    }
-                  },
-                  {
-                    "fieldName": "broken_pct_outside_busy_months",
-                    "displayName": "Broken % outside busy months",
-                    "useForSearch": false,
-                    "actions": {
-                      "hover": {
-                        "type": "tooltip",
-                        "tooltipTemplate": "{{ @ }}"
-                      }
-                    },
-                    "format": {
-                      "type": "numeral.js",
-                      "format": "0.0"
                     }
                   },
                   {
@@ -490,7 +467,7 @@
                 "showTitle": true,
                 "title": "Routes to fix first",
                 "showDescription": true,
-                "description": "Ranked by excess broken promises: broken minus what the national rate (8.7%) predicts for the route's orders. The fix type compares busy months with the rest of the year, so this table ignores the month filter."
+                "description": "Ranked by excess broken promises: broken minus what the national rate (8.7%) predicts for the route's orders. A route with fewer than 100 orders gets no fix type (Watch) and no margin (shown as \u2013). The fix type compares busy months with the rest of the year, so this table ignores the month filter."
               }
             }
           },
@@ -570,7 +547,7 @@
                 "showTitle": true,
                 "title": "Broken-promise rate by month and area",
                 "showDescription": true,
-                "description": "Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least twice the median month. The Northeast breaks promises in ordinary months too."
+                "description": "Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least twice the median month. The Northeast breaks promises in ordinary months too. August 2018 is a partial month: about 30% of its orders were promised for September and are not judged."
               }
             }
           },
@@ -654,7 +631,7 @@
                 "showTitle": true,
                 "title": "Now vs a promise 3 days later, by region",
                 "showDescription": true,
-                "description": "Promising later fixes less than a quarter of the problem, and less in the Northeast, where a late order typically arrives 8 days late."
+                "description": "With no filter: promising later fixes less than a quarter of the problem, and less in the Northeast, where a late order typically arrives 8 days late."
               },
               "mark": {
                 "layout": "group"
@@ -736,9 +713,9 @@
               },
               "frame": {
                 "showTitle": true,
-                "title": "Where the days go: seller to carrier, carrier to customer",
+                "title": "Where the days go: purchase to carrier, carrier to customer",
                 "showDescription": true,
-                "description": "Most of the delay happens after the handover: 72.2% of late deliveries were handed to the carrier by the seller's deadline."
+                "description": "Judged orders that arrived, both parts measured on the same orders, so each bar adds up to the delivery time. Most of a broken promise's delay comes after the handover."
               },
               "mark": {
                 "layout": "stack"
@@ -790,7 +767,7 @@
                 "showTitle": true,
                 "title": "Late deliveries handed over on time",
                 "showDescription": true,
-                "description": "Delivered broken promises whose seller handed the parcel to the carrier by the deadline."
+                "description": "Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline."
               }
             }
           },
@@ -1077,7 +1054,7 @@
                   },
                   {
                     "fieldName": "row_count",
-                    "displayName": "Rows today",
+                    "displayName": "Rows",
                     "useForSearch": false,
                     "actions": {
                       "hover": {
@@ -1245,7 +1222,7 @@
                 "showTitle": true,
                 "title": "Deliveries recorded per month",
                 "showDescription": true,
-                "description": "8,314 deliveries in August 2018, then 56 in September and 3 in October. So a promise is judged only if its day passed by August 31, 2018."
+                "description": "8,314 deliveries in August 2018, then 56 in September and 3 in October, so a promise is judged only if its day passed by August 31, 2018. Even so, the last days of August hold mostly orders that had already arrived."
               }
             }
           },

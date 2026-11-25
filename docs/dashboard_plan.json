@@ -29,7 +29,7 @@
         {"kind": "table", "title": "Routes to fix first: rate, margin, excess, fix type, first step", "x": 0, "y": 2, "w": 6, "h": 8},
         {"kind": "line", "title": "Broken-promise rate by month and area", "x": 0, "y": 10, "w": 3, "h": 6},
         {"kind": "bar", "title": "Now vs a promise 3 days later, by region", "x": 3, "y": 10, "w": 3, "h": 6},
-        {"kind": "bar", "title": "Where the days go: seller to carrier, carrier to customer", "x": 0, "y": 16, "w": 6, "h": 6}
+        {"kind": "bar", "title": "Where the days go: purchase to carrier, carrier to customer", "x": 0, "y": 16, "w": 6, "h": 6}
       ]
     },
     {
@@ -41,7 +41,7 @@
         {"kind": "table", "title": "Checks and Silver rules: rows kept, flagged, set aside", "x": 0, "y": 1, "w": 4, "h": 7},
         {"kind": "bar", "title": "Rows set aside, by reason", "x": 4, "y": 1, "w": 2, "h": 7},
         {"kind": "bar", "title": "Deliveries recorded per month", "x": 0, "y": 8, "w": 3, "h": 6},
-        {"kind": "bar", "title": "Fairness: broken-promise rate by region, with margins", "x": 3, "y": 8, "w": 3, "h": 6}
+        {"kind": "table", "title": "Fairness: broken-promise rate by region, with margins", "x": 3, "y": 8, "w": 3, "h": 6}
       ]
     },
     {
@@ -50,8 +50,9 @@
       "file": "sketch_3_where_local_sellers_would_help.png",
       "layout": [
         {"kind": "text", "title": "Where local sellers would help", "x": 0, "y": 0, "w": 6, "h": 1},
-        {"kind": "filter", "title": "Customer region", "x": 0, "y": 1, "w": 3, "h": 1},
-        {"kind": "filter", "title": "Product category", "x": 3, "y": 1, "w": 3, "h": 1},
+        {"kind": "filter", "title": "Customer region", "x": 0, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Customer state", "x": 2, "y": 1, "w": 2, "h": 1},
+        {"kind": "filter", "title": "Product category", "x": 4, "y": 1, "w": 2, "h": 1},
         {"kind": "scatter", "title": "States: orders per 100,000 residents vs broken rate", "x": 0, "y": 2, "w": 3, "h": 7},
         {"kind": "bar", "title": "Local vs Sao Paulo sellers: broken rate, days", "x": 3, "y": 2, "w": 3, "h": 7},
         {"kind": "bar", "title": "Share of orders, sellers and funnel recruits, by state", "x": 0, "y": 9, "w": 6, "h": 6}

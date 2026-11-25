@@ -43,7 +43,7 @@ Table. Gold fact. One row per order: promise, delivery, broken-promise outcome, 
 | `flag_delivered_before_carrier` | boolean | Rule 8: delivered before the carrier date. |
 | `flag_outside_full_months` | boolean | Rule 9: bought before 2017 or after August 2018. |
 | `is_in_window` | boolean | Bought from 2017-01-01 and promised by 2018-08-31. |
-| `is_judged` | boolean | In window, not canceled or unavailable, delivery date known. Every broken-promise rate counts these. |
+| `is_judged` | boolean | In window, not canceled or unavailable, and not one of the 8 orders marked delivered with no delivery date. An order that never arrived is judged. Every broken-promise rate counts these. |
 | `is_broken` | int | 1 when a judged order was not delivered by the end of the promised day, else 0. |
 | `is_broken_if_3_days_later` | int | 1 when it would still be broken with a promise 3 days later. |
 | `days_vs_promise` | int | Delivery day minus promised day: negative early, positive late. |
@@ -172,16 +172,16 @@ Table. Gold. One row per route (seller state > customer state, single-seller ord
 | `margin_other` | double | 95% margin of `rate_other`. |
 | `excess_busy` | double | Excess in busy months, against the national busy-month rate. |
 | `excess_other` | double | Excess in other months, against the national rate there. |
-| `needs_lasting_fix` | boolean | `rate_other` minus its margin is above `national_rate_other`. |
-| `needs_busy_season_plan` | boolean | `excess_busy` is larger than `excess_other`. |
+| `needs_lasting_fix` | boolean | The lasting-fix test alone: `rate_other` minus `margin_other` is above `national_rate_other`. `fix_type` also needs 100 orders. |
+| `needs_busy_season_plan` | boolean | The busy-season test alone: `excess_busy` is larger than `excess_other`. `fix_type` also needs 100 orders. |
 | `excess_rank` | int | Rank by `excess_broken`, largest first. |
-| `fix_type` | string | Both, Lasting fix, Busy-season plan, Watch, or No fix needed. |
-| `first_step` | string | Suggested first step for the fix type. |
+| `fix_type` | string | No fix needed (no excess); Watch (excess but fewer than 100 orders, or neither test met); otherwise Both, Lasting fix or Busy-season plan. |
+| `first_step` | string | Suggested first step for the fix type; empty when no fix is needed. |
 | `customer_region` | string | Customer region. |
 
 ### gold_states
 
-Table. Gold. One row per state: 12-month orders per 100,000 residents, active sellers per million, share of orders from another state, broken rate, and shares of orders, sellers and funnel recruits.
+Table. Gold. One row per state: 12-month orders per 100,000 residents, active sellers per million, share of single-seller orders from another state, broken rate, and shares of orders, sellers and funnel recruits.
 
 | Column | Type | Meaning |
 | --- | --- | --- |
@@ -219,8 +219,8 @@ Metric view. Olist delivery-promise metrics. Grain of the source: one row per or
 | `seller_state` | string | Seller state; empty for orders shipped by several sellers |
 | `seller_region` | string | Seller region; empty for orders shipped by several sellers |
 | `route` | string | Seller state > customer state; single-seller orders only |
-| `seller_location` | string | Where the seller is, seen from the customer |
-| `category` | string | Product category (English) of the order's first item |
+| `seller_location` | string | Where the seller is, seen from the customer. 'Several sellers or no item' holds the orders without a single seller: several sellers, or no item line |
+| `category` | string | Product category of the order's first item, in English where a translation exists |
 | `order_status` | string | Order status as recorded |
 | `promise_outcome` | string | Broken or kept, for judged orders |
 | `promise_bucket` | string | Days before or after the promised day, grouped |
@@ -231,22 +231,22 @@ Metric view. Olist delivery-promise metrics. Grain of the source: one row per or
 | `judged_orders` | bigint | Orders whose promise can be judged |
 | `broken_orders` | bigint | Judged orders not delivered by the end of the promised day |
 | `broken_rate` | double | Broken promises divided by judged orders |
-| `broken_rate_margin` | double | 95% margin of error of broken_rate, as a fraction (0.008 = plus or minus 0.8 points) |
+| `broken_rate_margin` | double | 95% margin of error of broken_rate, as a fraction (0.008 = plus or minus 0.8 points). It is 0 when no order or every order broke, so read it only on a few hundred orders or more |
 | `broken_rate_if_3_days_later` | double | The broken rate if every promise had been 3 days later |
 | `share_broken_missed_by_1_to_3_days` | double | Share of broken promises that arrived 1 to 3 days late |
 | `median_days_late` | double | Median days late of broken promises that were delivered |
 | `low_reviews` | bigint | Orders in the window whose latest review gives 1 or 2 stars |
 | `low_reviews_after_broken_promise` | bigint | Of those, orders whose promise was broken |
-| `share_low_reviews_after_broken_promise` | double | Share of 1-2 star reviews that follow a broken promise |
+| `share_low_reviews_after_broken_promise` | double | Of in-window orders whose latest review gives 1 or 2 stars, canceled ones included, the share that followed a broken promise |
 | `avg_review_score` | double | Average latest review score of judged orders |
 | `avg_score_kept` | double | Average latest review score of judged orders that kept their promise |
 | `avg_score_broken` | double | Average latest review score of broken promises |
-| `share_late_reviewed_before_arrival` | double | Of delivered broken promises with a review, the share answered before the parcel arrived |
+| `share_late_reviewed_before_arrival` | double | Of delivered broken promises with a review, the share answered before the parcel arrived (answer time before delivery time) |
 | `avg_score_late_before_arrival` | double | Average score of late orders reviewed before arrival |
 | `avg_score_late_after_arrival` | double | Average score of late orders reviewed after arrival |
-| `share_late_handed_over_by_deadline` | double | Of delivered broken promises, the share the seller handed to the carrier by the deadline |
-| `avg_days_to_carrier` | double | Average days from purchase to the carrier, judged orders |
-| `avg_days_carrier_to_customer` | double | Average days from the carrier to the customer, judged orders |
+| `share_late_handed_over_by_deadline` | double | Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline (carrier time at or before the deadline time) |
+| `avg_days_to_carrier` | double | Average days from purchase to the carrier, judged orders that arrived and whose two gaps are both measured, so it stacks with avg_days_carrier_to_customer |
+| `avg_days_carrier_to_customer` | double | Average days from the carrier to the customer, on the same orders as avg_days_to_carrier |
 | `median_delivery_days` | double | Median days from purchase to delivery, judged orders |
 | `median_promised_days` | double | Median days promised at checkout, judged orders |
 
@@ -266,11 +266,11 @@ View. Dashboard 2. Routes with excess broken promises, ranked, with rate, margin
 | `orders` | bigint | Judged single-seller orders on the route. |
 | `broken_orders` | bigint | Broken promises. |
 | `broken_pct` | double | Broken rate, percent (0 to 100). |
-| `margin_pts` | double | 95% margin, percentage points. |
+| `margin_pts` | string | 95% margin in percentage points, as text; a dash under 100 orders, where the formula is not reliable. |
 | `excess_broken` | double | Excess broken promises, rounded. |
 | `broken_pct_outside_busy_months` | double | Broken rate outside busy months, percent. |
-| `fix_type` | string | Both, Lasting fix, Busy-season plan, Watch, or No fix needed. |
-| `first_step` | string | Suggested first step for the fix type. |
+| `fix_type` | string | No fix needed (no excess); Watch (excess but fewer than 100 orders, or neither test met); otherwise Both, Lasting fix or Busy-season plan. |
+| `first_step` | string | Suggested first step for the fix type; empty when no fix is needed. |
 
 ### state_view
 
@@ -284,7 +284,7 @@ View. Dashboard 3. One row per state: orders per 100,000 residents, broken rate,
 | `orders_per_100k` | double | Orders per 100,000 residents, 12 months to Aug 2018. |
 | `broken_pct` | double | Broken rate, percent (0 to 100). |
 | `active_sellers_per_million` | double | Active sellers per million residents. |
-| `pct_orders_from_other_state` | double | Percent of orders shipped from another state. |
+| `pct_orders_from_other_state` | double | Percent of the state's single-seller orders in the 12 months shipped from another state. |
 | `pct_of_orders` | double | Percent of all orders, 12 months. |
 | `pct_of_sellers` | double | Percent of all sellers. |
 | `pct_of_funnel_recruits` | double | Percent of funnel sellers who sold. |
@@ -346,7 +346,7 @@ View. One row per Silver rule: table, rule, action (FIX, KEEP, FLAG, QUARANTINE)
 
 ### design_doc_numbers
 
-View. Every headline number of the design document, recomputed from Gold, next to the printed value.
+View. Every result printed in the design document, recomputed from Gold, next to the printed value.
 
 | Column | Type | Meaning |
 | --- | --- | --- |
@@ -431,7 +431,7 @@ Table. Silver. One row per customer_id (a customer record on one order); custome
 | `customer_unique_id` | string | The person who bought (one person can have several `customer_id`). |
 | `zip_prefix` | string | First 5 digits of the zip code, kept as text so a leading 0 is not lost. |
 | `city` | string | City as written in the source. |
-| `city_match` | string | City in lower case without accents, for matching. |
+| `city_match` | string | City in lower case without accents, with ´ or ` read as an apostrophe, for matching. |
 | `state` | string | State, two letters (SP, RJ, ...). |
 | `flag_zip_not_in_geolocation` | boolean | Rule 26: the zip prefix has no location. |
 
@@ -444,7 +444,7 @@ Table. Silver. One row per seller.
 | `seller_id` | string | Seller id. On `fact_orders`, empty when several sellers shipped the order. |
 | `zip_prefix` | string | First 5 digits of the zip code, kept as text so a leading 0 is not lost. |
 | `city` | string | City as written in the source. |
-| `city_match` | string | City in lower case without accents, for matching. |
+| `city_match` | string | City in lower case without accents, with ´ or ` read as an apostrophe, for matching. |
 | `state` | string | State, two letters (SP, RJ, ...). |
 | `flag_zip_not_in_geolocation` | boolean | Rule 26: the zip prefix has no location. |
 

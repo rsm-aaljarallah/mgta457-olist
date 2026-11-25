@@ -17,7 +17,10 @@
 --           The views are recalculated every time they are read, so
 --           the trust page always shows the current build.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24, following
---           the checks of the Chord project (see docs/ai_usage.md).
+--           the checks of the Chord project. Revised with Claude,
+--           2026-11-24, after an audit: checks 5, 7, 8, 9, 13 and 14
+--           hardened, checks 22 to 24 added, 17 design-document
+--           numbers added (see docs/ai_usage.md).
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -60,13 +63,15 @@ CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.quarantine WHERE source_table
 
 UNION ALL
 -- 5. Quarantine rate against the class thresholds (warn 1%, escalate
---    3%, page 10%), over the four tables above.
+--    3%, page 10%), over the four tables above. Empty raw tables are a
+--    FAIL, and NULLIF keeps the division from stopping the view.
 SELECT 5, 'quarantine rate (orders, items, payments, reviews)',
-  CASE WHEN 100.0 * q.n / r.n >= 10 THEN 'PAGE'
-       WHEN 100.0 * q.n / r.n >= 3  THEN 'ESCALATE'
-       WHEN 100.0 * q.n / r.n >= 1  THEN 'WARN'
+  CASE WHEN r.n = 0                         THEN 'FAIL'
+       WHEN 100.0 * q.n / r.n >= 10         THEN 'PAGE'
+       WHEN 100.0 * q.n / r.n >= 3          THEN 'ESCALATE'
+       WHEN 100.0 * q.n / r.n >= 1          THEN 'WARN'
        ELSE 'PASS' END,
-  concat(q.n, ' of ', r.n, ' rows = ', ROUND(100.0 * q.n / r.n, 3), '%')
+  concat(q.n, ' of ', r.n, ' rows = ', COALESCE(CAST(ROUND(100.0 * q.n / NULLIF(r.n, 0), 3) AS STRING), 'n/a'), '%')
 FROM (SELECT COUNT(*) n FROM olist.analytics.quarantine WHERE source_table <> 'geolocation') q
 CROSS JOIN (SELECT (SELECT COUNT(*) FROM olist.raw.orders) + (SELECT COUNT(*) FROM olist.raw.order_items)
                  + (SELECT COUNT(*) FROM olist.raw.order_payments) + (SELECT COUNT(*) FROM olist.raw.order_reviews) AS n) r
@@ -78,20 +83,38 @@ SELECT 6, 'silver_orders: one row per order_id',
   concat(COUNT(*), ' rows, ', COUNT(DISTINCT order_id), ' ids')
 FROM olist.analytics.silver_orders
 UNION ALL
-SELECT 7, 'silver_order_items: one row per order_id + order_item_id',
-  CASE WHEN COUNT(*) = COUNT(DISTINCT order_id, order_item_id) THEN 'PASS' ELSE 'FAIL' END,
-  concat(COUNT(*), ' rows, ', COUNT(DISTINCT order_id, order_item_id), ' keys')
-FROM olist.analytics.silver_order_items
+-- 7. The keys of items, payments and reviews hold. A row with an empty
+--    key part is not counted among the distinct keys, so it fails too.
+SELECT 7, 'silver items, payments and reviews: one row per key',
+  CASE WHEN i.n = i.k AND p.n = p.k AND r.n = r.k THEN 'PASS' ELSE 'FAIL' END,
+  concat('items ', i.n, ' rows, ', i.k, ' keys; payments ', p.n, ', ', p.k,
+         '; reviews ', r.n, ', ', r.k)
+FROM (SELECT COUNT(*) n, COUNT(DISTINCT order_id, order_item_id) k FROM olist.analytics.silver_order_items) i
+CROSS JOIN (SELECT COUNT(*) n, COUNT(DISTINCT order_id, payment_sequential) k FROM olist.analytics.silver_order_payments) p
+CROSS JOIN (SELECT COUNT(*) n, COUNT(DISTINCT review_id, order_id) k FROM olist.analytics.silver_order_reviews) r
 UNION ALL
-SELECT 8, 'silver_order_reviews: one latest review per reviewed order',
-  CASE WHEN SUM(CASE WHEN is_latest_for_order THEN 1 ELSE 0 END) = COUNT(DISTINCT order_id) THEN 'PASS' ELSE 'FAIL' END,
-  concat(SUM(CASE WHEN is_latest_for_order THEN 1 ELSE 0 END), ' latest reviews, ', COUNT(DISTINCT order_id), ' orders')
-FROM olist.analytics.silver_order_reviews
+-- 8. Each reviewed order has one latest review (rule 18), and no other
+--    review of that order was answered later.
+SELECT 8, 'silver_order_reviews: one latest review per reviewed order, the last answered',
+  CASE WHEN l.n = l.orders AND x.n = 0 THEN 'PASS' ELSE 'FAIL' END,
+  concat(l.n, ' latest reviews, ', l.orders, ' orders, ', x.n, ' with a later answer elsewhere')
+FROM (SELECT SUM(CASE WHEN is_latest_for_order THEN 1 ELSE 0 END) n, COUNT(DISTINCT order_id) orders
+      FROM olist.analytics.silver_order_reviews) l
+CROSS JOIN (SELECT COUNT(*) n FROM (
+              SELECT order_id, MAX(review_answer_ts) AS max_ts,
+                     MAX(CASE WHEN is_latest_for_order THEN review_answer_ts END) AS latest_ts
+              FROM olist.analytics.silver_order_reviews GROUP BY order_id)
+            WHERE NOT (latest_ts <=> max_ts)) x
 UNION ALL
-SELECT 9, 'silver_geolocation: one row per zip prefix',
-  CASE WHEN COUNT(*) = COUNT(DISTINCT zip_prefix) THEN 'PASS' ELSE 'FAIL' END,
-  concat(COUNT(*), ' rows, ', COUNT(DISTINCT zip_prefix), ' prefixes')
-FROM olist.analytics.silver_geolocation
+-- 9. One row per zip prefix, and every distinct point is either kept in
+--    a prefix's average or set aside in the quarantine (rule 25).
+SELECT 9, 'silver_geolocation: one row per zip prefix, every point kept or set aside',
+  CASE WHEN g.n = g.k AND g.pts + q.n = s.n THEN 'PASS' ELSE 'FAIL' END,
+  concat(g.n, ' rows, ', g.k, ' prefixes; ', g.pts, ' points kept + ', q.n,
+         ' set aside, of ', s.n, ' distinct points')
+FROM (SELECT COUNT(*) n, COUNT(DISTINCT zip_prefix) k, SUM(distinct_points) pts FROM olist.analytics.silver_geolocation) g
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.quarantine WHERE source_table = 'geolocation') q
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.stg_geolocation) s
 UNION ALL
 SELECT 10, 'fact_orders: one row per Silver order',
   CASE WHEN f.n = f.d AND f.n = s.n THEN 'PASS' ELSE 'FAIL' END,
@@ -114,23 +137,32 @@ SELECT 12, 'dimensions: one row per key',
   'dim_state, dim_seller, dim_product, dim_date'
 
 UNION ALL
--- 13. No join inflated money: item value in Gold equals Silver, and
---     the order-level item value adds up to the same total (the +4.6%
---     trap of joining items to payments).
-SELECT 13, 'item value is the same in Silver, fact_order_items and fact_orders',
-  CASE WHEN s.v = i.v AND s.v = o.v THEN 'PASS' ELSE 'FAIL' END,
-  concat('silver ', s.v, ', items ', i.v, ', orders ', o.v)
-FROM (SELECT SUM(price) v FROM olist.analytics.silver_order_items) s
-CROSS JOIN (SELECT SUM(price) v FROM olist.analytics.fact_order_items) i
-CROSS JOIN (SELECT SUM(item_value) v FROM olist.analytics.fact_orders) o
+-- 13. No join inflated money: the price, freight and payment totals in
+--     Gold equal Silver, at the item grain and at the order grain (the
+--     +4.6% trap of joining items to payments).
+SELECT 13, 'price, freight and payment totals are the same in Silver and Gold',
+  CASE WHEN s.price = i.price AND s.price = o.price
+        AND s.freight = i.freight AND s.freight = o.freight
+        AND p.paid = o.paid THEN 'PASS' ELSE 'FAIL' END,
+  concat('price ', s.price, ' / ', i.price, ' / ', o.price,
+         '; freight ', s.freight, ' / ', i.freight, ' / ', o.freight,
+         '; payments ', p.paid, ' / ', o.paid, ' (Silver / items / orders)')
+FROM (SELECT SUM(price) price, SUM(freight_value) freight FROM olist.analytics.silver_order_items) s
+CROSS JOIN (SELECT SUM(price) price, SUM(freight_value) freight FROM olist.analytics.fact_order_items) i
+CROSS JOIN (SELECT SUM(item_value) price, SUM(freight_value) freight, SUM(payment_value) paid FROM olist.analytics.fact_orders) o
+CROSS JOIN (SELECT SUM(payment_value) paid FROM olist.analytics.silver_order_payments) p
 
 UNION ALL
--- 14. Every order and every seller points to a state in dim_state.
-SELECT 14, 'every customer and seller state is in dim_state',
-  CASE WHEN c.n = 0 AND s.n = 0 THEN 'PASS' ELSE 'FAIL' END,
-  concat(c.n, ' orders and ', s.n, ' sellers without a known state')
-FROM (SELECT COUNT(*) n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_state d ON d.state = f.customer_state) c
-CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.dim_seller x LEFT ANTI JOIN olist.analytics.dim_state d ON d.state = x.seller_state) s
+-- 14. Every order points to a state in dim_state and to a day in
+--     dim_date, and every seller to a state: the metric view joins on
+--     these, so an order without a match would drop out of a filter.
+SELECT 14, 'every order has a known customer state and purchase day, every seller a known state',
+  CASE WHEN c.n = 0 AND d.n = 0 AND s.n = 0 THEN 'PASS' ELSE 'FAIL' END,
+  concat(c.n, ' orders without a known state, ', d.n, ' without a day in dim_date, ',
+         s.n, ' sellers without a known state')
+FROM (SELECT COUNT(*) n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.customer_state) c
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.purchase_date) d
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.dim_seller x LEFT ANTI JOIN olist.analytics.dim_state y ON y.state = x.seller_state) s
 
 UNION ALL
 -- 15. IBGE: 27 states, every one with a population, 208,494,900 in all.
@@ -188,7 +220,116 @@ SELECT 21, 'no judged order promised after 2018-08-31',
   CASE WHEN COUNT(*) = 0 THEN 'PASS' ELSE 'FAIL' END,
   concat(COUNT(*), ' orders')
 FROM olist.analytics.fact_orders
-WHERE is_judged AND promised_date > DATE '2018-08-31';
+WHERE is_judged AND promised_date > DATE '2018-08-31'
+
+UNION ALL
+-- 22. The rates stored in Gold for a rule (months, routes, states) count
+--     the same judged and broken orders as the metric view, and so does
+--     each route's split between busy and other months, which decides
+--     its fix type. A month, route or state missing on either side
+--     counts as a difference. (The per-resident measures have no
+--     counterpart in the metric view, so they are not compared.)
+SELECT 22, 'stored month, route and state rates agree with the metric view',
+  CASE WHEN m.bad + r.bad + rs.bad + s.bad = 0 THEN 'PASS' ELSE 'FAIL' END,
+  concat(m.n, ' months, ', r.n, ' routes with their busy-month split, ', s.n, ' states compared; ',
+         m.bad + r.bad + rs.bad + s.bad, ' differ')
+FROM (SELECT COUNT(*) n,
+             SUM(CASE WHEN g.judged_orders <=> v.j AND g.broken_orders <=> v.b THEN 0 ELSE 1 END) bad
+      FROM olist.analytics.gold_months g
+      FULL OUTER JOIN (SELECT * FROM (SELECT purchase_month k, MEASURE(judged_orders) j, MEASURE(broken_orders) b
+                                      FROM olist.analytics.delivery_metrics GROUP BY purchase_month)
+                       WHERE j > 0) v
+        ON v.k = g.month_start) m
+CROSS JOIN (SELECT COUNT(*) n,
+             SUM(CASE WHEN g.orders <=> v.j AND g.broken_orders <=> v.b THEN 0 ELSE 1 END) bad
+      FROM olist.analytics.gold_routes g
+      FULL OUTER JOIN (SELECT * FROM (SELECT route k, MEASURE(judged_orders) j, MEASURE(broken_orders) b
+                                      FROM olist.analytics.delivery_metrics GROUP BY route)
+                       WHERE k IS NOT NULL AND j > 0) v
+        ON v.k = g.route) r
+CROSS JOIN (SELECT COUNT(*) n,
+             SUM(CASE WHEN g.orders_busy <=> COALESCE(v.jb, 0) AND g.broken_busy <=> COALESCE(v.bb, 0)
+                       AND g.orders_other <=> COALESCE(v.jo, 0) AND g.broken_other <=> COALESCE(v.bo, 0)
+                      THEN 0 ELSE 1 END) bad
+      FROM olist.analytics.gold_routes g
+      LEFT JOIN (SELECT route k,
+                        SUM(CASE WHEN busy THEN j ELSE 0 END) jb, SUM(CASE WHEN busy THEN b ELSE 0 END) bb,
+                        SUM(CASE WHEN NOT busy THEN j ELSE 0 END) jo, SUM(CASE WHEN NOT busy THEN b ELSE 0 END) bo
+                 FROM (SELECT route, is_busy_month AS busy, MEASURE(judged_orders) j, MEASURE(broken_orders) b
+                       FROM olist.analytics.delivery_metrics GROUP BY route, is_busy_month)
+                 WHERE route IS NOT NULL
+                 GROUP BY route) v
+        ON v.k = g.route) rs
+CROSS JOIN (SELECT COUNT(*) n,
+             SUM(CASE WHEN g.judged_orders <=> v.j AND g.broken_orders <=> v.b THEN 0 ELSE 1 END) bad
+      FROM olist.analytics.gold_states g
+      FULL OUTER JOIN (SELECT * FROM (SELECT customer_state k, MEASURE(judged_orders) j, MEASURE(broken_orders) b
+                                      FROM olist.analytics.delivery_metrics GROUP BY customer_state)
+                       WHERE j > 0) v
+        ON v.k = g.state) s
+
+UNION ALL
+-- 23. Typing lost nothing: no value that was written in a raw file became
+--     empty when Silver read it as a number or a date. Columns with a
+--     quarantine rule of their own (purchase date, price, payment amount,
+--     review score) are covered by that rule instead. The stg_ views keep
+--     each raw row as JSON, so the raw text and the typed value sit side
+--     by side; a raw blank is absent from the JSON, so it is not counted.
+SELECT 23, 'nothing readable was lost when Silver typed the columns',
+  CASE WHEN o.n + i.n + p.n + r.n + l.n + d.n + pr.n = 0 THEN 'PASS' ELSE 'FAIL' END,
+  concat(o.n + i.n + p.n + r.n + l.n + d.n + pr.n, ' rows lost a value (orders ', o.n, ', items ', i.n,
+         ', payments ', p.n, ', reviews ', r.n, ', leads ', l.n, ', deals ', d.n, ', products ', pr.n, ')')
+FROM (SELECT COUNT(*) n FROM olist.analytics.stg_orders
+      WHERE quarantine_reason IS NULL
+        AND ((get_json_object(raw_row, '$.order_approved_at') IS NOT NULL AND approved_ts IS NULL)
+          OR (get_json_object(raw_row, '$.order_delivered_carrier_date') IS NOT NULL AND carrier_ts IS NULL)
+          OR (get_json_object(raw_row, '$.order_delivered_customer_date') IS NOT NULL AND delivered_ts IS NULL)
+          OR (get_json_object(raw_row, '$.order_estimated_delivery_date') IS NOT NULL AND promised_date IS NULL))) o
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.stg_order_items
+      WHERE quarantine_reason IS NULL
+        AND ((get_json_object(raw_row, '$.order_item_id') IS NOT NULL AND order_item_id IS NULL)
+          OR (get_json_object(raw_row, '$.shipping_limit_date') IS NOT NULL AND shipping_limit_ts IS NULL)
+          OR (get_json_object(raw_row, '$.freight_value') IS NOT NULL AND freight_value IS NULL))) i
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.stg_order_payments
+      WHERE quarantine_reason IS NULL
+        AND ((get_json_object(raw_row, '$.payment_sequential') IS NOT NULL AND payment_sequential IS NULL)
+          OR (get_json_object(raw_row, '$.payment_installments') IS NOT NULL AND payment_installments IS NULL))) p
+CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.stg_order_reviews
+      WHERE quarantine_reason IS NULL
+        AND ((get_json_object(raw_row, '$.review_creation_date') IS NOT NULL AND review_creation_date IS NULL)
+          OR (get_json_object(raw_row, '$.review_answer_timestamp') IS NOT NULL AND review_answer_ts IS NULL))) r
+CROSS JOIN (SELECT COUNT(*) n FROM olist.raw.leads x JOIN olist.analytics.silver_leads y ON y.mql_id = x.mql_id
+      WHERE x.first_contact_date IS NOT NULL AND y.first_contact_date IS NULL) l
+CROSS JOIN (SELECT COUNT(*) n FROM olist.raw.closed_deals x JOIN olist.analytics.silver_closed_deals y ON y.mql_id = x.mql_id
+      WHERE (x.won_date IS NOT NULL AND y.won_ts IS NULL)
+         OR (x.declared_monthly_revenue IS NOT NULL AND TRY_CAST(x.declared_monthly_revenue AS DOUBLE) IS NULL)) d
+CROSS JOIN (SELECT COUNT(*) n FROM olist.raw.products x JOIN olist.analytics.silver_products y ON y.product_id = x.product_id
+      WHERE (x.product_name_lenght IS NOT NULL AND y.product_name_length IS NULL)
+         OR (x.product_description_lenght IS NOT NULL AND y.product_description_length IS NULL)
+         OR (x.product_photos_qty IS NOT NULL AND y.product_photos_qty IS NULL)
+         OR (x.product_weight_g IS NOT NULL AND y.product_weight_g IS NULL)
+         OR (x.product_length_cm IS NOT NULL AND y.product_length_cm IS NULL)
+         OR (x.product_height_cm IS NOT NULL AND y.product_height_cm IS NULL)
+         OR (x.product_width_cm IS NOT NULL AND y.product_width_cm IS NULL)) pr
+
+UNION ALL
+-- 24. The days in Gold are the days written in the files (assumption A4):
+--     the purchase, promised and delivery days of every order equal the
+--     first ten characters of the raw text. A session in another time
+--     zone could otherwise shift a day when a timestamp is turned into a
+--     date, and move an order between on time and late.
+SELECT 24, 'purchase, promised and delivery days in Gold are the days written in the files',
+  CASE WHEN SUM(CASE WHEN f.purchase_date <=> TRY_CAST(substr(r.order_purchase_timestamp, 1, 10) AS DATE)
+                      AND f.promised_date <=> TRY_CAST(substr(r.order_estimated_delivery_date, 1, 10) AS DATE)
+                      AND f.delivered_date <=> TRY_CAST(substr(r.order_delivered_customer_date, 1, 10) AS DATE)
+                     THEN 0 ELSE 1 END) = 0 THEN 'PASS' ELSE 'FAIL' END,
+  concat(COUNT(*), ' orders, ',
+         SUM(CASE WHEN f.purchase_date <=> TRY_CAST(substr(r.order_purchase_timestamp, 1, 10) AS DATE)
+                   AND f.promised_date <=> TRY_CAST(substr(r.order_estimated_delivery_date, 1, 10) AS DATE)
+                   AND f.delivered_date <=> TRY_CAST(substr(r.order_delivered_customer_date, 1, 10) AS DATE)
+                  THEN 0 ELSE 1 END), ' with a different day')
+FROM olist.analytics.fact_orders f
+JOIN olist.raw.orders r ON r.order_id = f.order_id;
 
 SELECT * FROM olist.analytics.pipeline_checks ORDER BY check_no;
 
@@ -202,10 +343,12 @@ COMMENT 'One row per Silver rule: table, rule, action (FIX, KEEP, FLAG, QUARANTI
 AS
 SELECT 1 AS rule_no, 'orders' AS table_name, 'Unreadable purchase date set aside' AS rule, 'QUARANTINE' AS action,
        (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'unreadable purchase date') AS row_count
-UNION ALL SELECT 2, 'orders', 'Unknown order status set aside', 'QUARANTINE',
+UNION ALL SELECT 2, 'orders', 'Missing or unknown order status set aside', 'QUARANTINE',
        (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'unknown order status')
+-- Rule 3 counts with the delivery day stored in Gold, so the count does
+-- not depend on the time zone of the session that reads this view.
 UNION ALL SELECT 3, 'orders', 'Late counted by calendar day: delivered orders late by day', 'FIX',
-       (SELECT COUNT(*) FROM olist.analytics.silver_orders WHERE order_status = 'delivered' AND to_date(delivered_ts) > promised_date)
+       (SELECT COUNT(*) FROM olist.analytics.fact_orders WHERE order_status = 'delivered' AND delivered_date > promised_date)
 UNION ALL SELECT 4, 'orders', 'Delivered without a delivery date', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_orders WHERE flag_delivered_without_date)
 UNION ALL SELECT 5, 'orders', 'Canceled but has a delivery date', 'FLAG',
@@ -218,7 +361,7 @@ UNION ALL SELECT 8, 'orders', 'Delivered before the carrier date', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_orders WHERE flag_delivered_before_carrier)
 UNION ALL SELECT 9, 'orders', 'Bought outside January 2017 to August 2018', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_orders WHERE flag_outside_full_months)
-UNION ALL SELECT 10, 'order_items', 'Repeated item line set aside', 'KEEP',
+UNION ALL SELECT 10, 'order_items', 'Repeated item line: one copy kept, the others set aside', 'QUARANTINE',
        (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'repeated item line')
 UNION ALL SELECT 11, 'order_items', 'Price missing or not above 0 set aside', 'QUARANTINE',
        (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'price missing, unreadable or not above 0')
@@ -226,8 +369,8 @@ UNION ALL SELECT 12, 'order_items', 'Seller deadline in 2019 or later', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_order_items WHERE flag_deadline_after_2018)
 UNION ALL SELECT 13, 'orders', 'Items from two or more sellers', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_orders WHERE flag_several_sellers)
-UNION ALL SELECT 14, 'order_payments', 'Payment type not_defined set aside', 'QUARANTINE',
-       (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'payment type not_defined')
+UNION ALL SELECT 14, 'order_payments', 'Payment type not_defined, or an unreadable amount, set aside', 'QUARANTINE',
+       (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason IN ('payment type not_defined', 'unreadable payment value'))
 UNION ALL SELECT 15, 'order_payments', 'Payments summed to one row per order before joining', 'KEEP',
        (SELECT COUNT(*) FROM olist.analytics.silver_order_payments)
 UNION ALL SELECT 16, 'order_payments', 'Vouchers of 0.00 and 0 installments kept as they are', 'KEEP',
@@ -240,10 +383,10 @@ UNION ALL SELECT 19, 'order_reviews', 'Score outside 1 to 5 set aside', 'QUARANT
        (SELECT COUNT(*) FROM olist.analytics.quarantine WHERE reason = 'review score not 1 to 5')
 UNION ALL SELECT 20, 'customers', 'Zip prefix kept as 5-character text (starts with 0)', 'FIX',
        (SELECT COUNT(*) FROM olist.analytics.silver_customers WHERE zip_prefix LIKE '0%')
--- Rule 21: customer and seller cities carry no accents in this data,
--- so today the rule changes no row there; the accents (73,442 raw rows)
--- are all in geolocation, whose city Silver does not keep. The count
--- is kept so the trust page shows if a new file brings accents in.
+-- Rule 21: the rule changes no customer city and 3 seller cities: one
+-- "sao paulo" typed with a separate accent mark, and two "santa barbara
+-- d'oeste" with an accent where the apostrophe belongs. Most accents
+-- (73,442 raw rows) are in geolocation, whose city Silver does not keep.
 UNION ALL SELECT 21, 'customers, sellers', 'City matched without accents (customer and seller cities changed)', 'FIX',
        (SELECT COUNT(*) FROM olist.analytics.silver_customers WHERE city_match <> lower(trim(city)))
        + (SELECT COUNT(*) FROM olist.analytics.silver_sellers WHERE city_match <> lower(trim(city)))
@@ -264,8 +407,9 @@ UNION ALL SELECT 26, 'sellers', 'Zip prefix not in geolocation', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_sellers WHERE flag_zip_not_in_geolocation)
 UNION ALL SELECT 27, 'geolocation', 'State taken from customers and sellers, not geolocation', 'KEEP',
        (SELECT COUNT(*) FROM (SELECT zip_prefix FROM olist.analytics.stg_geolocation GROUP BY zip_prefix HAVING COUNT(DISTINCT state) > 1))
-UNION ALL SELECT 28, 'leads', 'Blank origin becomes unknown', 'FIX',
+UNION ALL SELECT 28, 'leads, closed_deals', 'Blank origin, segment or lead type becomes unknown', 'FIX',
        (SELECT COUNT(*) FROM olist.raw.leads WHERE origin IS NULL OR trim(origin) = '')
+       + (SELECT COUNT(*) FROM olist.raw.closed_deals WHERE business_segment IS NULL OR lead_type IS NULL)
 UNION ALL SELECT 29, 'closed_deals', 'Deal seller with no orders in the data', 'FLAG',
        (SELECT COUNT(*) FROM olist.analytics.silver_closed_deals WHERE flag_no_orders_in_data)
 UNION ALL SELECT 30, 'closed_deals', 'Declared monthly revenue of 0 becomes empty', 'FIX',
@@ -276,14 +420,15 @@ UNION ALL SELECT 31, 'ibge', 'Population unnested and joined to the state list',
 SELECT * FROM olist.analytics.silver_rule_counts ORDER BY rule_no;
 
 -- ------------------------------------------------------------
--- 3. Design document numbers, recomputed from Gold.
---    doc_value is the number as printed in docs/design_doc.md
---    (2026-11-24). gold_value is today's build, rounded the same
---    way. MATCH means they agree; DIFFERS lists a number the doc
---    should be updated to (the conclusion is unchanged; see note).
+-- 3. Design document numbers, recomputed from Gold: every result the
+--    design document prints (the facts about the raw data come from
+--    02_profile_bronze.sql instead). doc_value is the number as printed
+--    in docs/design_doc.md (version of 2026-11-24). gold_value is the
+--    current build, rounded the same way. MATCH means they agree, and
+--    DIFFERS means the document must be updated.
 -- ------------------------------------------------------------
 CREATE OR REPLACE VIEW olist.analytics.design_doc_numbers
-COMMENT 'Every headline number of the design document, recomputed from Gold, next to the printed value.'
+COMMENT 'Every result printed in the design document, recomputed from Gold, next to the printed value.'
 AS
 WITH m AS (
   SELECT
@@ -323,11 +468,49 @@ months AS (
          SUM(CASE WHEN is_busy_month THEN broken_orders END) / SUM(broken_orders) AS busy_broken
   FROM olist.analytics.gold_months
 ),
+-- Review scores of kept and broken promises, by delivery time (Dashboard 1)
+band AS (
+  SELECT delivery_time_band, MEASURE(avg_score_kept) AS kept, MEASURE(avg_score_broken) AS broken
+  FROM olist.analytics.delivery_metrics GROUP BY delivery_time_band
+),
+-- Local against distant sellers, same customer state and product category,
+-- outside Sao Paulo, where each side has at least 20 delivered orders
+comparisons AS (
+  SELECT customer_state, category,
+         AVG(CASE WHEN is_local_seller THEN delivery_days END)     AS local_days,
+         AVG(CASE WHEN NOT is_local_seller THEN delivery_days END) AS distant_days,
+         SUM(CASE WHEN is_local_seller THEN 1 ELSE 0 END)          AS local_orders,
+         SUM(CASE WHEN NOT is_local_seller THEN 1 ELSE 0 END)      AS distant_orders
+  FROM olist.analytics.fact_orders
+  WHERE is_judged AND seller_count = 1 AND delivery_days IS NOT NULL AND customer_state <> 'SP'
+  GROUP BY customer_state, category
+),
+-- Deliveries per calendar month, from the delivery days in Gold
+delivered_months AS (
+  SELECT CAST(date_trunc('month', delivered_date) AS DATE) AS month_start, COUNT(*) AS deliveries
+  FROM olist.analytics.fact_orders WHERE delivered_date IS NOT NULL GROUP BY 1
+),
+-- The routes again with the window ending a week earlier (promised by
+-- 2018-08-24), to test that the top ten does not depend on the last week
+early AS (
+  SELECT route,
+         SUM(is_broken) - COUNT(*) * (SELECT AVG(is_broken) FROM olist.analytics.fact_orders
+                                      WHERE is_judged AND seller_count = 1 AND promised_date <= DATE '2018-08-24') AS excess
+  FROM olist.analytics.fact_orders
+  WHERE is_judged AND seller_count = 1 AND promised_date <= DATE '2018-08-24'
+  GROUP BY route
+),
+early_top AS (SELECT route, ROW_NUMBER() OVER (ORDER BY excess DESC, route) AS rk FROM early),
+-- Rio customers by seller location, busy months against the other months
+rio_period AS (
+  SELECT is_busy_month, seller_location, MEASURE(broken_rate) AS rate, MEASURE(median_delivery_days) AS days
+  FROM olist.analytics.delivery_metrics WHERE customer_state = 'RJ' GROUP BY is_busy_month, seller_location
+),
 v AS (
   SELECT 'Judged orders in the window' AS number, '95,901' AS doc_value, format_number(judged, 0) AS gold_value FROM m
   UNION ALL SELECT 'Broken-promise rate', '8.6%', concat(ROUND(100 * rate, 1), '%') FROM m
-  UNION ALL SELECT '1-2 star reviews in the window', '14,205', format_number(low, 0) FROM m
-  UNION ALL SELECT 'Share of 1-2 star reviews after a broken promise', '36.7%', concat(ROUND(100 * low_share, 1), '%') FROM m
+  UNION ALL SELECT '1-2 star reviews in the window (orders, latest review)', '14,205', format_number(low, 0) FROM m
+  UNION ALL SELECT 'Orders with a 1-2 star review: share after a broken promise', '36.7%', concat(ROUND(100 * low_share, 1), '%') FROM m
   UNION ALL SELECT 'Late orders reviewed before arrival', '70.1%', concat(ROUND(100 * before_share, 1), '%') FROM m
   UNION ALL SELECT 'Score of late orders reviewed before arrival', '1.65', CAST(ROUND(score_before, 2) AS STRING) FROM m
   UNION ALL SELECT 'Score of late orders reviewed after arrival', '3.72', CAST(ROUND(score_after, 2) AS STRING) FROM m
@@ -345,9 +528,13 @@ v AS (
     (SELECT format_number(SUM(excess_broken), 0) FROM olist.analytics.gold_routes WHERE excess_rank BETWEEN 2 AND 10)
   UNION ALL SELECT 'National rate, single-seller orders', '8.7%', concat(ROUND(100 * national_rate, 1), '%') FROM route1
   UNION ALL SELECT 'National rate outside busy months, single-seller', '6.4%', concat(ROUND(100 * national_rate_other, 1), '%') FROM route1
-  UNION ALL SELECT 'Fix types named in the doc', 'BA, PE, PI lasting; PR > RJ, SP > SC busy-season',
-    (SELECT concat_ws('; ', collect_list(concat(route, ' ', fix_type))) FROM olist.analytics.gold_routes
-      WHERE route IN ('SP > BA', 'SP > PE', 'SP > PI', 'PR > RJ', 'SP > SC'))
+  UNION ALL SELECT 'Top ten routes by fix type', '5 both, SP > RJ first; SP > AL, SP > BA, SP > PE lasting; PR > RJ, SP > SC busy-season',
+    (SELECT concat(SUM(CASE WHEN fix_type = 'Both' THEN 1 ELSE 0 END), ' both, ',
+                   CASE WHEN MAX(CASE WHEN excess_rank = 1 THEN fix_type END) = 'Both'
+                        THEN concat(MAX(CASE WHEN excess_rank = 1 THEN route END), ' first') ELSE 'the first route is not Both' END, '; ',
+                   concat_ws(', ', array_sort(collect_list(CASE WHEN fix_type = 'Lasting fix' THEN route END))), ' lasting; ',
+                   concat_ws(', ', array_sort(collect_list(CASE WHEN fix_type = 'Busy-season plan' THEN route END))), ' busy-season')
+     FROM olist.analytics.gold_routes WHERE excess_rank <= 10)
   UNION ALL SELECT 'Median month', '6.89%', concat(ROUND(100 * median_rate, 2), '%') FROM months
   UNION ALL SELECT 'Busy months', 'Nov 2017, Feb 2018, Mar 2018',
     (SELECT concat_ws(', ', sort_array(collect_list(date_format(month_start, 'yyyy-MM')))) FROM olist.analytics.gold_months WHERE is_busy_month)
@@ -363,11 +550,11 @@ v AS (
      FROM quiet WHERE customer_area = 'Southeast without Rio')
   UNION ALL SELECT 'Promise 3 days later: broken rate', '6.6%', concat(ROUND(100 * rate3, 1), '%') FROM m
   UNION ALL SELECT 'Broken promises missed by 1 to 3 days', '22.7%', concat(ROUND(100 * miss13, 1), '%') FROM m
-  UNION ALL SELECT 'Late deliveries handed over by the seller deadline', '72.2%', concat(ROUND(100 * handed, 1), '%') FROM m
+  UNION ALL SELECT 'Late deliveries from one seller handed over by the deadline', '72.2%', concat(ROUND(100 * handed, 1), '%') FROM m
   UNION ALL SELECT 'Northeast vs Southeast broken rate', '15.6% vs 7.8%',
     concat((SELECT ROUND(100 * rate, 1) FROM region WHERE customer_region = 'Northeast'), '% vs ',
            (SELECT ROUND(100 * rate, 1) FROM region WHERE customer_region = 'Southeast'), '%')
-  UNION ALL SELECT 'Northeast: median days late', '8', (SELECT CAST(CAST(med_late AS INT) AS STRING) FROM region WHERE customer_region = 'Northeast')
+  UNION ALL SELECT 'Northeast: median days late', '8', (SELECT CAST(CAST(ROUND(med_late) AS INT) AS STRING) FROM region WHERE customer_region = 'Northeast')
   UNION ALL SELECT 'Rio vs Sao Paulo: orders per 100,000 (12 months)', '56.4 vs 71.7',
     concat((SELECT ROUND(orders_per_100k_12m, 1) FROM olist.analytics.gold_states WHERE state = 'RJ'), ' vs ',
            (SELECT ROUND(orders_per_100k_12m, 1) FROM olist.analytics.gold_states WHERE state = 'SP'))
@@ -379,23 +566,84 @@ v AS (
   UNION ALL SELECT 'Rio: local sellers broken rate and margin', '7.7% +/- 1.7',
     (SELECT concat(ROUND(100 * rate, 1), '% +/- ', ROUND(100 * margin, 1)) FROM rio_local WHERE seller_location = 'Same state as customer')
   UNION ALL SELECT 'Rio: median days, local vs Sao Paulo sellers', '5 vs 13',
-    concat((SELECT CAST(days AS INT) FROM rio_local WHERE seller_location = 'Same state as customer'), ' vs ',
-           (SELECT CAST(days AS INT) FROM rio_local WHERE seller_location = 'Sao Paulo'))
-  UNION ALL SELECT 'Rio: share of single-seller orders from local sellers', '7.8%',
+    concat((SELECT CAST(ROUND(days) AS INT) FROM rio_local WHERE seller_location = 'Same state as customer'), ' vs ',
+           (SELECT CAST(ROUND(days) AS INT) FROM rio_local WHERE seller_location = 'Sao Paulo'))
+  UNION ALL SELECT 'Rio: share of judged single-seller orders from local sellers', '7.8%',
     concat(ROUND(100 * (SELECT n FROM rio_local WHERE seller_location = 'Same state as customer')
-                 / (SELECT SUM(n) FROM rio_local WHERE seller_location <> 'Several sellers'), 1), '%')
+                 / (SELECT SUM(n) FROM rio_local WHERE seller_location <> 'Several sellers or no item'), 1), '%')
   UNION ALL SELECT 'Sao Paulo: share of funnel sellers who sold / of all sellers', '61.1% / 59.7%',
     (SELECT concat(ROUND(100 * share_of_funnel_sellers, 1), '% / ', ROUND(100 * share_of_sellers, 1), '%') FROM olist.analytics.gold_states WHERE state = 'SP')
   UNION ALL SELECT 'Rio: share of orders / of funnel sellers', '12.7% / 6.8%',
     (SELECT concat(ROUND(100 * share_of_orders_12m, 1), '% / ', ROUND(100 * share_of_funnel_sellers, 1), '%') FROM olist.analytics.gold_states WHERE state = 'RJ')
+  -- The results added by the audit of 2026-11-24
+  UNION ALL SELECT 'Broken promises: arrived late / shipped, never delivered / never reached a carrier', '6,531 / 1,094 / 602',
+    (SELECT concat(format_number(SUM(CASE WHEN delivered_ts IS NOT NULL THEN 1 ELSE 0 END), 0), ' / ',
+                   format_number(SUM(CASE WHEN delivered_ts IS NULL AND carrier_ts IS NOT NULL THEN 1 ELSE 0 END), 0), ' / ',
+                   format_number(SUM(CASE WHEN delivered_ts IS NULL AND carrier_ts IS NULL THEN 1 ELSE 0 END), 0))
+     FROM olist.analytics.fact_orders WHERE is_broken = 1)
+  UNION ALL SELECT 'Window a week earlier: broken-promise rate, and the top ten routes', '8.7%; same top ten, SP > RJ first',
+    concat((SELECT concat(ROUND(100 * SUM(is_broken) / COUNT(*), 1), '%') FROM olist.analytics.fact_orders
+            WHERE is_judged AND promised_date <= DATE '2018-08-24'),
+           '; ',
+           CASE WHEN (SELECT COUNT(*) FROM early_top e JOIN olist.analytics.gold_routes g ON g.route = e.route
+                      WHERE e.rk <= 10 AND g.excess_rank <= 10) = 10
+                 AND (SELECT route FROM early_top WHERE rk = 1) = 'SP > RJ'
+                THEN 'same top ten, SP > RJ first' ELSE 'the top ten changes' END)
+  UNION ALL SELECT 'Fastest delivery band: late orders with a review', '74',
+    (SELECT CAST(COUNT(*) AS STRING) FROM olist.analytics.fact_orders
+     WHERE is_broken = 1 AND review_score IS NOT NULL AND delivery_time_band = 'Week 1 (0-7 days)')
+  UNION ALL SELECT 'Fastest delivery band: score gap, on time minus late', '0.4',
+    (SELECT format_number(kept - broken, 1) FROM band WHERE delivery_time_band = 'Week 1 (0-7 days)')
+  UNION ALL SELECT 'Other delivery bands: score gap, on time minus late', '1.0 to 1.8',
+    (SELECT concat(format_number(MIN(kept - broken), 1), ' to ', format_number(MAX(kept - broken), 1))
+     FROM band WHERE delivery_time_band LIKE 'Week%' AND delivery_time_band <> 'Week 1 (0-7 days)')
+  UNION ALL SELECT 'Top ten routes: into the Northeast / into Rio', '5 / 2',
+    (SELECT concat(SUM(CASE WHEN customer_region = 'Northeast' THEN 1 ELSE 0 END), ' / ',
+                   SUM(CASE WHEN customer_state = 'RJ' THEN 1 ELSE 0 END))
+     FROM olist.analytics.gold_routes WHERE excess_rank <= 10)
+  UNION ALL SELECT 'Sao Paulo to Minas Gerais: broken rate', '6.7%',
+    (SELECT concat(ROUND(100 * broken_rate, 1), '%') FROM olist.analytics.gold_routes WHERE route = 'SP > MG')
+  UNION ALL SELECT 'Busy months: national rate, in month order', '14.0% / 15.0% / 20.8%',
+    (SELECT concat_ws(' / ', transform(array_sort(collect_list(struct(month_start, broken_rate))),
+                                       x -> concat(format_number(100 * x.broken_rate, 1), '%')))
+     FROM olist.analytics.gold_months WHERE is_busy_month)
+  UNION ALL SELECT 'Rio: broken rate in busy months', '33.4%',
+    (SELECT concat(ROUND(100 * MEASURE(broken_rate), 1), '%') FROM olist.analytics.delivery_metrics
+     WHERE customer_state = 'RJ' AND is_busy_month)
+  UNION ALL SELECT 'Rio: median promised days, busy vs other months', '24 vs 26',
+    (SELECT concat(CAST(ROUND(MAX(CASE WHEN is_busy_month THEN d END)) AS INT), ' vs ',
+                   CAST(ROUND(MAX(CASE WHEN NOT is_busy_month THEN d END)) AS INT))
+     FROM (SELECT is_busy_month, MEASURE(median_promised_days) AS d FROM olist.analytics.delivery_metrics
+           WHERE customer_state = 'RJ' GROUP BY is_busy_month))
+  UNION ALL SELECT 'Northeast: broken promises a promise 3 days later would keep', '17.9%',
+    (SELECT concat(ROUND(100 * (1 - r3 / r), 1), '%')
+     FROM (SELECT MEASURE(broken_rate_if_3_days_later) AS r3, MEASURE(broken_rate) AS r
+           FROM olist.analytics.delivery_metrics WHERE customer_region = 'Northeast'))
+  UNION ALL SELECT 'Comparisons where local sellers deliver faster', '43 of 43 (6 states)',
+    (SELECT concat(SUM(CASE WHEN local_days < distant_days THEN 1 ELSE 0 END), ' of ', COUNT(*),
+                   ' (', COUNT(DISTINCT customer_state), ' states)')
+     FROM comparisons WHERE local_orders >= 20 AND distant_orders >= 20)
+  UNION ALL SELECT 'Deliveries recorded in Aug / Sep / Oct 2018', '8,314 / 56 / 3',
+    (SELECT concat(format_number(MAX(CASE WHEN month_start = DATE '2018-08-01' THEN deliveries END), 0), ' / ',
+                   format_number(MAX(CASE WHEN month_start = DATE '2018-09-01' THEN deliveries END), 0), ' / ',
+                   format_number(MAX(CASE WHEN month_start = DATE '2018-10-01' THEN deliveries END), 0))
+     FROM delivered_months)
+  UNION ALL SELECT 'November 2017: broken promises above the busy-month threshold', '15',
+    (SELECT CAST(broken_orders - CEIL(2 * median_rate * judged_orders) AS STRING)
+     FROM olist.analytics.gold_months WHERE month_start = DATE '2017-11-01')
+  UNION ALL SELECT 'Rio, busy months: broken rate, local vs Sao Paulo sellers', '4.1% vs 39.8%',
+    concat((SELECT ROUND(100 * rate, 1) FROM rio_period WHERE is_busy_month AND seller_location = 'Same state as customer'), '% vs ',
+           (SELECT ROUND(100 * rate, 1) FROM rio_period WHERE is_busy_month AND seller_location = 'Sao Paulo'), '%')
+  UNION ALL SELECT 'Rio, other months: broken rate, local vs Sao Paulo sellers', '8.7% vs 10.0%',
+    concat((SELECT ROUND(100 * rate, 1) FROM rio_period WHERE NOT is_busy_month AND seller_location = 'Same state as customer'), '% vs ',
+           (SELECT ROUND(100 * rate, 1) FROM rio_period WHERE NOT is_busy_month AND seller_location = 'Sao Paulo'), '%')
+  UNION ALL SELECT 'Rio, other months: median days, local vs Sao Paulo sellers', '5 vs 12',
+    concat((SELECT CAST(ROUND(days) AS INT) FROM rio_period WHERE NOT is_busy_month AND seller_location = 'Same state as customer'), ' vs ',
+           (SELECT CAST(ROUND(days) AS INT) FROM rio_period WHERE NOT is_busy_month AND seller_location = 'Sao Paulo'))
 )
 SELECT
   number, doc_value, gold_value,
   CASE WHEN replace(doc_value, ',', '') = replace(gold_value, ',', '')
-         OR (number = 'Fix types named in the doc'
-             AND gold_value LIKE '%SP > BA Lasting fix%' AND gold_value LIKE '%SP > PE Lasting fix%'
-             AND gold_value LIKE '%SP > PI Lasting fix%' AND gold_value LIKE '%PR > RJ Busy-season plan%'
-             AND gold_value LIKE '%SP > SC Busy-season plan%')
          OR (number = 'Busy months' AND gold_value = '2017-11, 2018-02, 2018-03')
          OR (number = 'Score, 4-7 days late' AND gold_value = '2.1')
        THEN 'MATCH' ELSE 'DIFFERS' END AS result

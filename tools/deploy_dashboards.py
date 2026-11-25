@@ -18,7 +18,6 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DASH = os.path.join(ROOT, "dashboards")
 IDS = os.path.join(DASH, "dash_ids.json")
 WAREHOUSE = "667de8a20d9687ca"
-PARENT = "/Users/aaljarallah@ucsd.edu"
 NAMES = {
     "olist_1_what_broken_promises_cost.lvdash.json": "Olist 1 - What broken promises cost",
     "olist_2_where_promises_break.lvdash.json": "Olist 2 - Where promises break",
@@ -31,6 +30,16 @@ if "--profile" in args:
     i = args.index("--profile"); profile = args[i + 1]; del args[i:i + 2]
 only = args[0] if args else None
 
+
+def workspace_home(profile):
+    """The signed-in user's home folder in the workspace, where a new dashboard is created."""
+    r = subprocess.run(["databricks", "current-user", "me", "--profile", profile, "-o", "json"],
+                       capture_output=True, text=True)
+    if r.returncode:
+        sys.exit("Cannot read the signed-in user: " + r.stderr[:300])
+    return "/Users/" + json.loads(r.stdout)["userName"]
+
+
 ids = json.load(open(IDS)) if os.path.exists(IDS) else {}
 ok = True
 for f, name in NAMES.items():
@@ -42,7 +51,7 @@ for f, name in NAMES.items():
         cmd = ["databricks", "lakeview", "update", ids[f]]
     else:
         cmd = ["databricks", "lakeview", "create"]
-        body["parent_path"] = PARENT
+        body["parent_path"] = workspace_home(profile)
     r = subprocess.run(cmd + ["--profile", profile, "--json", json.dumps(body), "-o", "json"],
                        capture_output=True, text=True)
     if r.returncode:

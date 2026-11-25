@@ -11,18 +11,18 @@ Every number on the dashboards comes from 13 source files through the SQL script
 | Setup | `00_setup.sql` | nothing | catalog `olist`, schemas `raw` and `analytics`, volume `landing_zone` | |
 | Bronze | `01_load_raw.sql` | the 13 files in the volume | 13 tables in `olist.raw`, every CSV column as text | as delivered |
 | Profile | `02_profile_bronze.sql` | `olist.raw` | nothing (read-only, 23 queries with expected values) | |
-| Silver | `03_silver.sql` | `olist.raw` | `stg_` views (the rules), 11 `silver_` tables, `quarantine` | one row per source key |
+| Silver | `03_silver.sql` | `olist.raw` | `stg_` views (typing and the quarantine rules), 11 `silver_` tables (the other rules), `quarantine` | one row per source key |
 | Gold | `04_gold.sql` | Silver | `fact_orders`, `fact_order_items`, `dim_date`, `dim_state`, `dim_seller`, `dim_product`, `gold_months`, `gold_routes`, `gold_states` | order; item line; day; state; seller; product; month; route; state |
-| Metrics | `05_metric_view.sql` | `fact_orders` and three dimensions | `delivery_metrics` | formulas, not rows |
+| Metrics | `05_metric_view.sql` | `fact_orders`, joined to `dim_state` twice (customer and seller) and to `dim_date` | `delivery_metrics` | formulas, not rows |
 | Checks | `06_checks.sql` | raw, Silver, Gold, metric view | `pipeline_checks`, `silver_rule_counts`, `design_doc_numbers` | one row per check, rule or number |
-| Dashboard views | `07_dashboard_views.sql` | Gold and quarantine | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` | route; state; region; month; reason |
-| Dashboards | `dashboards/build_dashboards.py` | the metric view and the views above | three published AI/BI dashboards | |
+| Dashboard views | `07_dashboard_views.sql` | Gold, the metric view and the quarantine | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` | route; state; region; month; reason |
+| Dashboards | `dashboards/build_dashboards.py` | the metric view, the 07 views, and the check views `pipeline_checks` and `silver_rule_counts` | three published AI/BI dashboards | |
 
-The dashboards read only the metric view and the views of `07_dashboard_views.sql`. They do no calculation: every rate is a measure in `delivery_metrics`, and every rule (busy months, fix type, per-resident measures) is a column in Gold.
+The dashboards read only the metric view, the views of `07_dashboard_views.sql` and two check views from `06_checks.sql`. They do no calculation: every rate a filter changes is a measure in `delivery_metrics`, and every rule (busy months, fix type, per-resident measures) is a column in Gold. On every build, check 22 compares the judged and broken orders behind each stored month, route and state rate, and each route's busy-month split, with the metric view.
 
 ## Tracing one number back
 
-The headline "8.6% of orders broke their promise" on Dashboard 1:
+The headline 8.6% on Dashboard 1, the share of judged orders whose promise broke:
 
 1. The card asks the metric view for `MEASURE(broken_rate)`, defined as `SUM(is_broken) / SUM(is_judged)` over `fact_orders`.
 2. In `fact_orders`, `is_judged` is true for 95,901 orders: bought from January 2017, promised by August 31, 2018, not canceled or unavailable, and not one of the 8 delivered orders without a delivery date. `is_broken` is 1 for 8,227 of them: delivered on a later calendar day than promised, or not delivered.
