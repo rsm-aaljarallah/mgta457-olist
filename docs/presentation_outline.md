@@ -62,7 +62,7 @@ Total: 14.75 minutes. AJ 5.5, Ruby 4.75, Merna 4.5.
 
 ## 11. Ask Olist: plain-English questions, tested answers
 
-**Merna, 0.5 min.** Managers will have questions we did not chart. Ask Olist, our Genie space, answers them in plain English from the same metric view as the dashboards, and shows the SQL it ran. We tested it on eleven questions with known answers; after one fix to its instructions, it got all eleven right. Here it compares Rio with Sao Paulo, the gap behind Dashboard 3.
+**Merna, 0.5 min.** Managers will have questions we did not chart. Ask Olist, our Genie space, answers them in plain English from the same metric view as the dashboards, and shows the SQL it ran. We tested it with questions whose answers we know: the first run missed one, and since one fix to its instructions it gets all eleven right. Here it compares Rio with Sao Paulo, the gap behind Dashboard 3.
 
 ## 12. What Olist should do next
 
@@ -70,4 +70,4 @@ Total: 14.75 minutes. AJ 5.5, Ruby 4.75, Merna 4.5.
 
 ## 13. What the data cannot tell us
 
-**Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And deliveries stop being recorded after August 2018, so we deliver a pipeline a monthly refresh would rerun, not a list for today. Thank you; we are happy to take questions.
+**Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And deliveries stop being recorded after August 2018, so we deliver a pipeline that reruns on new data, not a list for today. Thank you; we are happy to take questions.

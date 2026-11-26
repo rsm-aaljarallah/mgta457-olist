@@ -5,8 +5,9 @@
 A Genie space lets a reader ask a question in plain English: Genie writes the
 SQL, runs it on the warehouse and shows the answer with the SQL it ran. Genie
 only sees what the spec gives it:
-  tables            the metric view and three small Gold tables, so every rate
-                    comes from a measure defined once in 05_metric_view.sql
+  tables            the metric view, the route list view and two small Gold
+                    tables, so every rate comes from the metric view or from a
+                    rate stored in Gold and checked against it
   instructions      our definitions (judged, broken, route, busy month...)
   examples          questions with the SQL we trust, which Genie reuses
   sample_questions  the questions shown on the space's start page

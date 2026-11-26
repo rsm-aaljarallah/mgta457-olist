@@ -96,5 +96,5 @@ Region and state say where the problem is; they never rank a seller. Northeast c
 - One broken promise in five (1,696) is an order that never arrived. The data does not say why.
 - For Rio customers, most of the local sellers' edge in broken promises comes from the busy months: 4.1% against 39.8% for Sao Paulo sellers. In the other months it is 8.7% against 10.0%, within the margin, though local sellers stay faster (a median of 5 days against 12).
 - The data has no carrier name or tracking event, so why Sao Paulo to Rio breaks stays a question for Olist and its carriers.
-- Deliveries stop being recorded after August 2018: we deliver rules a monthly refresh would rerun, not a list for today.
+- Deliveries stop being recorded after August 2018: we deliver rules the weekly rebuild would rerun on new data, not a list for today.
 - Only 380 of the 842 signed sellers appear in the orders, and the leads carry no location.

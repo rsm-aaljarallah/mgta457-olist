@@ -276,7 +276,7 @@ View. Dashboard 2. Routes with excess broken promises, ranked, with rate, margin
 | `margin_pts` | string | 95% margin in percentage points, as text; a dash under 100 orders, where the formula is not reliable. |
 | `excess_broken` | double | Excess broken promises, rounded. |
 | `broken_pct_outside_busy_months` | double | Broken rate outside busy months, percent. |
-| `fix_type` | string | No fix needed (no excess); Watch (excess but fewer than 100 orders, or neither test met); otherwise Both, Lasting fix or Busy-season plan. |
+| `fix_type` | string | Both, Lasting fix, Busy-season plan or Watch (excess but fewer than 100 orders, or neither test met). The list holds only routes with excess broken promises. |
 | `first_step` | string | Suggested first step for the fix type; empty when no fix is needed. |
 
 ### state_view

@@ -39,8 +39,9 @@ SELECT
   route.judged_orders              AS route_orders,
   route.broken_rate                AS route_rate,
   national.broken_rate             AS national_rate,
-  -- Empty under 100 orders, where a rate is not reliable (the same
-  -- 100-order rule as the route list), so the alert stays quiet.
-  CASE WHEN route.judged_orders >= 100
-       THEN ROUND(route.broken_rate / national.broken_rate, 2) END AS times_national_rate
+  ROUND(route.broken_rate / national.broken_rate, 2) AS times_national_rate
 FROM route CROSS JOIN national
+-- Under 100 judged orders on the route a rate is not reliable (the same
+-- 100-order rule as the route list). The query then returns no row, and
+-- the alert reads an empty result as OK (jobs/alert_sp_rj.json).
+WHERE route.judged_orders >= 100

@@ -5,7 +5,8 @@
 // The colour theme is applied by a helper outside this repository; set OLIST_THEME_SCRIPT
 // to its path, or leave it missing and the deck is written without the theme step.
 // Speaker notes come from tools/deck/script.json, the same text as docs/presentation_outline.md.
-// Screenshots come from docs/img (taken from the published dashboards on 2026-11-24).
+// Screenshots come from docs/img (taken in Databricks on 2026-11-24; dash_1_words.png, genie_answer.png and
+// star_schema.png on 2026-11-26).
 // AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's deck script
 // (see docs/ai_usage.md). Revised with Claude, 2026-11-24: slide 10 (declared keys and the
 // rebuild job) and the comparisons on slides 5 and 7. Revised with Claude, 2026-11-26: what the
@@ -204,7 +205,7 @@ points(s, [
 // ---------------------------------------------------------------- 11 Genie
 s = content(11, "Can we trust it");
 shot(s, "genie_answer.png", 0.6, 1.35, 8.2, 5.5, "The Ask Olist Genie space answering a question");
-stat(s, 9.1, 1.5, 3.6, "11 / 11", "benchmark questions answered correctly, after one fix to the instructions", "Benchmarks", "00A972");
+stat(s, 9.1, 1.5, 3.6, "11 / 11", "benchmark questions right on the latest run; the first run missed 1 of 10", "Benchmarks", "00A972");
 points(s, [
   "Answers from the same metric view as the dashboards, and shows the SQL it ran",
   "Its instructions hold our definitions: judged, broken, route, busy month",

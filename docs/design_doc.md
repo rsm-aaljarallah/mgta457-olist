@@ -79,7 +79,7 @@ Each reader has a starting point. The Head of Customer Experience opens Dashboar
 
 ## What the data can and cannot say
 
-The data has no carrier name, tracking event or address, so why Sao Paulo to Rio breaks remains a question for Olist and its carriers. Every link between promises and reviews is a correlation. We found the busy months by looking at the data, and November 2017 clears the rule by only 15 broken promises, so the rule will be judged on new months. The 1,278 orders shipped by several sellers have one carrier date, so they stay in the totals but not in the routes. Deliveries stop being recorded after August 2018, so we deliver a pipeline and rules that a monthly refresh would rerun, not a list for today. Only 380 of the 842 signed sellers appear in the orders and the leads carry no location, so the funnel tells us where recruits sell, not how every channel performs.
+The data has no carrier name, tracking event or address, so why Sao Paulo to Rio breaks remains a question for Olist and its carriers. Every link between promises and reviews is a correlation. We found the busy months by looking at the data, and November 2017 clears the rule by only 15 broken promises, so the rule will be judged on new months. The 1,278 orders shipped by several sellers have one carrier date, so they stay in the totals but not in the routes. Deliveries stop being recorded after August 2018, so we deliver a pipeline and rules that would rerun on new data, not a list for today. Only 380 of the 842 signed sellers appear in the orders and the leads carry no location, so the funnel tells us where recruits sell, not how every channel performs.
 
 ## Fairness
 

@@ -1,6 +1,6 @@
 {
   "name": "Olist rebuild: Silver to dashboards",
-  "description": "MGTA 457 Olist project. Runs sql/03_silver.sql to sql/07_dashboard_views.sql in order, then refreshes the three published dashboards. 06_checks.sql ends with a gate that fails when any pipeline check is not PASS, so the dashboard views and the refresh never run on a build that failed a check. Runs every Monday at 6:00 Pacific time, as a monthly refresh of new data would, and emails the owner when a task fails. Deployed by tools/deploy_job.py.",
+  "description": "MGTA 457 Olist project. Runs sql/03_silver.sql to sql/07_dashboard_views.sql in order, then refreshes the three published dashboards. 06_checks.sql ends with a gate that fails when any pipeline check is not PASS, so the dashboard views and the refresh never run on a build that failed a check. Runs every Monday at 6:00 Pacific time, so new data would reach the dashboards without anyone starting it, and emails the owner when a task fails. Deployed by tools/deploy_job.py.",
   "max_concurrent_runs": 1,
   "tags": {"project": "mgta457-olist"},
   "schedule": {"quartz_cron_expression": "0 0 6 ? * MON", "timezone_id": "America/Los_Angeles", "pause_status": "UNPAUSED"},

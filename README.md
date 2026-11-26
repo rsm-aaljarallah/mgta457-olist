@@ -56,7 +56,7 @@ The Word and PowerPoint files are built from the markdown and scripts in this re
 | `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=<folder with pptxgenjs> OLIST_THEME_SCRIPT=<theme helper> node tools/deck/build_deck.js` |
 | `docs/presentation_outline.md` | `tools/deck/script.json` | `python3 tools/deck/build_outline.py` |
 
-The dashboard screenshots in `docs/img/dash_*.png` were taken from the published dashboards on 2026-11-24, except `dash_1_words.png` and `genie_answer.png`, taken on 2026-11-26.
+The screenshots in `docs/img` were taken in Databricks on 2026-11-24, except `dash_1_words.png`, `genie_answer.png` and `star_schema.png`, taken on 2026-11-26.
 
 Two paths depend on the machine: `NODE_PATH` must point at a folder where `pptxgenjs` is installed, and the deck's colour theme comes from a helper outside this repository (set `OLIST_THEME_SCRIPT` to it; without it the deck is written without the theme step).
 
@@ -77,7 +77,7 @@ Run each SQL file in the Databricks SQL editor, in order, or from this folder wi
 11. `sql/08_robustness.sql`: read-only. Asks whether Sao Paulo to Rio's excess survives an adjustment for what it sells and when, whether customers whose promise broke come back less, and how good the review word list is (two samples to read by hand); each query lists the value we expect.
 12. `python3 tools/deploy_genie.py --eval`: creates or updates the Genie space from `genie/ask_olist.json`, then asks it every benchmark question and prints whether each answer matched the benchmark SQL.
 
-Steps 5 to 9 and the dashboard refresh also run as one Databricks job: `python3 tools/deploy_job.py --run` copies files 03 to 07 to the workspace folder `mgta457-olist/sql`, creates or updates the job and the alert, and runs the job, printing each task's result. The job stops before the dashboard views if any check fails. It runs every Monday at 6:00 Pacific time, as a monthly refresh of new data would, and emails the owner when a task fails. The alert runs its query, `sql/09_alert_sp_rj.sql`, every Monday at 7:00.
+Steps 5 to 9 and the dashboard refresh also run as one Databricks job: `python3 tools/deploy_job.py --run` copies files 03 to 07 to the workspace folder `mgta457-olist/sql`, creates or updates the job and the alert, and runs the job, printing each task's result. The job stops before the dashboard views if any check fails. It runs every Monday at 6:00 Pacific time, so new data would reach the dashboards without anyone starting it, and emails the owner when a task fails. The alert runs its query, `sql/09_alert_sp_rj.sql`, every Monday at 7:00.
 
 ## Dashboards
 
@@ -118,9 +118,9 @@ Four changes followed the audit. None moves a number: all 24 checks pass and all
 
 Three additions. All 24 checks still pass and all 56 design-document numbers match; the only change to an existing table is two new columns on `fact_orders`.
 
-- **What the bad reviews say.** `fact_orders` flags each latest review whose title or comment says the parcel was late, slow or missing, by a Portuguese word list written out in `04_gold.sql`. Of the 1-2 star reviews that have text, 66.4% on broken promises say so, against 19.1% on kept ones: two new cards on Dashboard 1, served by four new measures. We read 100 flagged reviews drawn at random and 95 were real delivery complaints; 18 of 30 unflagged broken-promise reviews were delivery complaints too, so the list undercounts (`sql/08_robustness.sql`, query 3).
-- **Ask Olist, a Genie space.** Questions in plain English, answered from the metric view and three small tables, with our definitions as instructions and six trusted example queries. Its 11 benchmark questions all came back right, after one fix to how it states percentages (`python3 tools/deploy_genie.py --eval`).
-- **A weekly schedule and an alert.** The job runs every Monday at 6:00 Pacific time and emails the owner when a task fails. At 7:00 an alert compares Sao Paulo to Rio's broken-promise rate in the latest month with the national rate, and fires at twice or more, the same yardstick as the busy-month rule. It would have fired for orders bought from November 2017 to March 2018, and reads 0.87 for August 2018. We made it evaluate once on the real rule (OK) and once on a lowered one (triggered) before setting it to weekly.
+- **What the bad reviews say.** `fact_orders` flags each latest review whose title or comment says the parcel was late, slow or missing, by a Portuguese word list written out in `04_gold.sql`. Of the 1-2 star reviews that have text, 66.4% on broken promises say so, against 19.1% on kept ones: two new cards on Dashboard 1, from two of four new measures (the other two serve Genie and other groupings). We read 100 flagged reviews drawn at random and 95 were real delivery complaints; 18 of 30 unflagged broken-promise reviews were delivery complaints too, so the list undercounts (`sql/08_robustness.sql`, query 3).
+- **Ask Olist, a Genie space.** Questions in plain English, answered from the metric view and three small tables, with our definitions as instructions and six trusted example queries. We test it with benchmark questions whose answers we know: the first run missed 1 of 10 (a rate written as a percentage), and after one fix to its instructions it got 10 of 10, then 11 of 11 with one more question (`python3 tools/deploy_genie.py --eval`).
+- **A weekly schedule and an alert.** The job runs every Monday at 6:00 Pacific time and emails the owner when a task fails. At 7:00 an alert compares Sao Paulo to Rio's broken-promise rate in the latest month with the national rate, and fires at twice or more, the same yardstick as the busy-month rule. It would have fired for orders bought from November 2017 to March 2018, and reads 0.87 for August 2018. We made it evaluate on the real rule (OK), on a lowered one (triggered) and on a route with no orders (no row, OK) before setting it to weekly.
 
 Ruby and Merna can edit the dashboards, the Genie space and the alert, run the job, and read the `olist` data.
 

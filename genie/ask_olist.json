@@ -1,6 +1,6 @@
 {
   "title": "Ask Olist: delivery promises",
-  "description": "Ask in plain English about Olist's delivery promises from January 2017 to August 2018: how many broke, where, what they cost in reviews, and which routes to fix first. Genie answers from the project's metric view and Gold tables, and shows the SQL it ran.",
+  "description": "Ask in plain English about Olist's delivery promises from January 2017 to August 2018: how many broke, where, what they cost in reviews, and which routes to fix first. Genie answers from the project's metric view and three small tables, and shows the SQL it ran.",
   "tables": [
     "olist.analytics.delivery_metrics",
     "olist.analytics.gold_months",
@@ -11,7 +11,7 @@
     "The data covers Olist orders bought from January 2017 and promised by August 31, 2018. If a question asks about later dates, say that the data ends in August 2018.",
     "A delivery promise is the delivery date shown at checkout. A promise is broken when the order was not delivered by the end of the promised day; an order that never arrived counts as broken. Broken-promise rates are over judged orders: bought and promised inside the window, and not canceled or unavailable.",
     "For any rate, average, share or count of orders, query olist.analytics.delivery_metrics with MEASURE(), for example SELECT customer_region, MEASURE(broken_rate) FROM olist.analytics.delivery_metrics GROUP BY customer_region. Group by its dimensions (purchase_month, customer_state, customer_region, seller_state, route, category, promise_outcome and the others). Never compute a rate yourself from counts.",
-    "A route is seller state > customer state, written like 'SP > RJ', for orders shipped by one seller. To rank routes to fix, use olist.analytics.route_list ordered by excess_rank: excess_broken is how many more promises broke on the route than the national rate predicts. fix_type is Lasting fix, Busy-season plan, Both, Watch (fewer than 100 orders, or neither test met) or No fix needed.",
+    "A route is seller state > customer state, written like 'SP > RJ', for orders shipped by one seller. To rank routes to fix, use olist.analytics.route_list ordered by excess_rank: excess_broken is how many more promises broke on the route than the national rate predicts. route_list holds only the routes with excess broken promises, and its fix_type is Lasting fix, Busy-season plan, Both or Watch (fewer than 100 orders, or neither test met).",
     "State codes: SP Sao Paulo, RJ Rio de Janeiro, MG Minas Gerais, RS Rio Grande do Sul, PR Parana, SC Santa Catarina, BA Bahia, DF Federal District, ES Espirito Santo, GO Goias, PE Pernambuco, CE Ceara. Regions follow IBGE: North, Northeast, Southeast, South, Center-West. customer_area splits the Southeast into Rio de Janeiro and the rest.",
     "Busy months are months whose national broken-promise rate is at least twice the median month: November 2017, February 2018 and March 2018 (olist.analytics.gold_months, is_busy_month).",
     "Questions per resident (orders per 100,000 residents, active sellers per million) use olist.analytics.gold_states, whose 12-month columns cover September 2017 to August 2018.",

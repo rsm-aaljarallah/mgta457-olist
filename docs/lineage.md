@@ -32,11 +32,11 @@ The Gold tables declare their keys in Unity Catalog: 9 primary keys and 15 forei
 
 ## The rebuild job
 
-The job `Olist rebuild: Silver to dashboards` runs the SQL files 03 to 07 in order on the SQL warehouse, then refreshes the three published dashboards. The last statement of `06_checks.sql` is a gate: it fails when any pipeline check is not PASS, and a failed task stops the tasks after it, so the dashboard views and the refresh never run on a build that failed a check. The gate does not undo the tables already rebuilt. The job runs every Monday at 6:00 Pacific time, as a monthly refresh of new data would, and emails its owner when a task fails; run it by hand after a change to the SQL.
+The job `Olist rebuild: Silver to dashboards` runs the SQL files 03 to 07 in order on the SQL warehouse, then refreshes the three published dashboards. The last statement of `06_checks.sql` is a gate: it fails when any pipeline check is not PASS, and a failed task stops the tasks after it, so the dashboard views and the refresh never run on a build that failed a check. The gate does not undo the tables already rebuilt. The job runs every Monday at 6:00 Pacific time, so new data would reach the dashboards without anyone starting it, and emails its owner when a task fails; run it by hand after a change to the SQL.
 
 ![A run of the rebuild job: every task succeeded](img/job_run.png "width=6.5")
 
-An hour later, at 7:00, a Databricks SQL alert runs `09_alert_sp_rj.sql`. It divides Sao Paulo to Rio's broken-promise rate in the latest month by the national rate in that month, and emails the owner when the result is 2 or more, the yardstick of the busy-month rule. Under 100 judged orders on the route it returns no value and stays quiet. On past months it would have fired for orders bought from November 2017 to March 2018 (2.2 to 3.6 times the national rate); for August 2018 it reads 0.87.
+An hour later, at 7:00, a Databricks SQL alert runs `09_alert_sp_rj.sql`. It divides Sao Paulo to Rio's broken-promise rate in the latest month by the national rate in that month, and emails the owner when the result is 2 or more, the yardstick of the busy-month rule. Under 100 judged orders on the route it returns no row, which the alert reads as OK. On past months it would have fired for orders bought from November 2017 to March 2018 (2.2 to 3.6 times the national rate); for August 2018 it reads 0.87.
 
 ## Tracing one number back
 

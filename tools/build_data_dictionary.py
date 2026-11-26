@@ -220,6 +220,8 @@ MEANING_BY_TABLE = {
     ("gold_routes", "broken_orders"): "Broken promises on the route.",
     ("gold_routes", "broken_rate"): "The route's broken rate.",
     ("route_list", "orders"): "Judged single-seller orders on the route.",
+    ("route_list", "fix_type"): "Both, Lasting fix, Busy-season plan or Watch (excess but fewer than 100 orders, or "
+                                "neither test met). The list holds only routes with excess broken promises.",
     ("route_list", "excess_broken"): "Excess broken promises, rounded.",
     ("route_list", "margin_pts"): "95% margin in percentage points, as text; a dash under 100 orders, where the formula is not reliable.",
     ("region_fairness", "judged_orders"): "Judged orders of the region's customers.",

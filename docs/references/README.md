@@ -46,5 +46,5 @@ The star schema follows the article:
 
 It departs in two places, on purpose:
 
-- **Natural keys, not surrogate keys.** We keep Olist's ids, the state codes and the dates as keys. The data is a fixed extract with no history to track, so surrogate integers would add joins without benefit. A monthly refresh in which sellers change would need surrogate keys and slowly changing dimensions.
+- **Natural keys, not surrogate keys.** We keep Olist's ids, the state codes and the dates as keys. The data is a fixed extract with no history to track, so surrogate integers would add joins without benefit. A regular refresh in which sellers change would need surrogate keys and slowly changing dimensions.
 - **An empty seller key instead of a "no single seller" row.** 2,053 orders have no single seller: 1,278 shipped by several sellers and 775 with no item. Kimball would point them at a special dimension row; we leave the key empty, which a declared foreign key allows, and the metric view labels them "Several sellers or no item". A special row would also have to be kept out of every count of sellers.

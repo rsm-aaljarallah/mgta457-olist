@@ -1,6 +1,5 @@
 # Project overview
 
-
 ## The question and the answer
 
 Olist lets small Brazilian shops sell on the big marketplaces, and its carriers deliver the orders. Every customer sees a promised delivery date at checkout. We asked where Olist breaks that promise, what a broken promise costs, and what Olist should fix first.
@@ -17,11 +16,11 @@ Olist lets small Brazilian shops sell on the big marketplaces, and its carriers 
 | Databricks lakehouse: curated Unity Catalog tables | catalog `olist`: `raw` (Bronze), `analytics` (Silver, Gold, metric view, checks) |
 | SQL workflow (the transformation layer) | `sql/00_setup.sql` to `sql/07_dashboard_views.sql`; files 03 to 07 also run as one Databricks job that stops if a check fails |
 | Three dashboards, 4 pages, 26 visuals | Databricks AI/BI (accepted by the professor in place of Power BI); files in `dashboards/` |
-| Ask Olist, a Genie space for questions in plain English | Databricks; spec in `genie/ask_olist.json`, 11 of 11 benchmark questions answered correctly |
+| Ask Olist, a Genie space for questions in plain English | Databricks; spec in `genie/ask_olist.json`, 11 of 11 benchmark questions correct on the latest run |
 | A weekly rebuild and an alert on Sao Paulo to Rio | Databricks job and SQL alert; settings in `jobs/`, the alert's query in `sql/09_alert_sp_rj.sql` |
 | Final documentation (this document) | `deliverables/olist_final_documentation.docx` |
 | Presentation | `deliverables/olist_presentation.pptx` |
-| Code | GitHub `rsm-aaljarallah/mgta457-olist` (private) |
+| Code | GitHub `rsm-aaljarallah/mgta457-olist` (private; access on request) |
 
 ## The three dashboards
 
@@ -53,7 +52,7 @@ Its second page, **Can we trust it**, shows every pipeline check, what each Silv
 
 ![Dashboard 3: where the funnel recruits](img/dash_3_shares.png "width=6.3")
 
-**Ask Olist**, a Genie space, takes the questions the dashboards do not chart. Genie writes the SQL against the metric view and three small Gold tables, runs it, and shows the SQL with the answer. Its instructions hold our definitions (judged, broken, route, busy month), and six example questions carry SQL we trust. We tested it with 11 benchmark questions whose answers we know: after one fix to how it states percentages, it answered all 11 correctly. Below, it compares Rio with Sao Paulo.
+**Ask Olist**, a Genie space, takes the questions the dashboards do not chart. Genie writes the SQL against the metric view, the route list and two small Gold tables, runs it, and shows the SQL with the answer. Its instructions hold our definitions (judged, broken, route, busy month), and six example questions carry SQL we trust. We test it with benchmark questions whose answers we know: the first run missed 1 of 10 (a rate written as a percentage); after one fix to its instructions it got 10 of 10, then 11 of 11 with one more question. Below, it compares Rio with Sao Paulo.
 
 ![Ask Olist: Genie compares Rio de Janeiro with Sao Paulo](img/genie_answer.png "width=6.3")
 
@@ -68,7 +67,7 @@ Its second page, **Can we trust it**, shows every pipeline check, what each Silv
 
 ## Result of the last build
 
-All 24 pipeline checks pass. 3 of 415,201 order, item, payment and review rows were set aside (0.001%), plus 27 location points outside Brazil. All 56 results printed in the design document are recomputed from Gold by `design_doc_numbers` and match. The Gold tables declare 9 primary and 15 foreign keys, and every foreign key finds its row (check 14). An audit on 2026-11-24 rebuilt every order from the source files independently and found the same numbers; the metric dictionary shows how the answer holds up under other definitions. On 2026-11-26 the Genie space answered all 11 of its benchmark questions correctly, and the alert, made to evaluate on the spot, read OK on its real rule and triggered on a lowered one.
+All 24 pipeline checks pass. 3 of 415,201 order, item, payment and review rows were set aside (0.001%), plus 27 location points outside Brazil. All 56 results printed in the design document are recomputed from Gold by `design_doc_numbers` and match. The Gold tables declare 9 primary and 15 foreign keys, and every foreign key finds its row (check 14). An audit on 2026-11-24 rebuilt every order from the source files independently and found the same numbers; the metric dictionary shows how the answer holds up under other definitions. On 2026-11-26 the Genie space answered all 11 of its benchmark questions correctly on its latest run, and the alert, made to evaluate on the spot, read OK on its real rule, triggered on a lowered one, and read OK on a route with no orders.
 
 ## The rest of this document
 
