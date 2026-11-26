@@ -55,10 +55,18 @@ The Word and PowerPoint files are built from the markdown and scripts in this re
 | `deliverables/olist_final_documentation.docx` | `docs/project_overview.md`, `lineage.md`, `metric_dictionary.md`, `data_dictionary.md`, `data_quality_log.md`, `ai_usage.md` | `python3 tools/build_data_dictionary.py` and `python3 tools/draw_lineage.py`, then `python3 tools/export_word.py deliverables/olist_final_documentation.docx "Olist Delivery Promise: Final Project Documentation" "MGTA 457 Business Intelligence Systems, Fall 2026. Team: AJ, Ruby, Merna." docs/project_overview.md docs/lineage.md docs/metric_dictionary.md docs/data_dictionary.md docs/data_quality_log.md docs/ai_usage.md` |
 | `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=<folder with pptxgenjs> OLIST_THEME_SCRIPT=<theme helper> node tools/deck/build_deck.js` |
 | `docs/presentation_outline.md` | `tools/deck/script.json` | `python3 tools/deck/build_outline.py` |
+| `../olist_submission/` and `../olist_submission.zip` | the three Office files, the dashboard files, the SQL, the Genie spec, the job and alert settings | `python3 tools/make_submission.py` |
 
 The screenshots in `docs/img` were taken in Databricks on 2026-11-24, except `dash_1_words.png`, `genie_answer.png` and `star_schema.png`, taken on 2026-11-26.
 
 Two paths depend on the machine: `NODE_PATH` must point at a folder where `pptxgenjs` is installed, and the deck's colour theme comes from a helper outside this repository (set `OLIST_THEME_SCRIPT` to it; without it the deck is written without the theme step).
+
+## Before you submit
+
+1. Each of us writes our name in the files we own: the `Owner` and `Reviewed and understood by` lines at the top of the 10 SQL files, the `Who reviewed it` and `What we changed` columns of `docs/ai_usage.md`, and the Reviewer column of the team-decisions doc.
+2. Re-export `deliverables/olist_final_documentation.docx` (command above), because it contains the AI usage log.
+3. Run `python3 tools/make_submission.py` and upload the files in `../olist_submission/`, or the zip.
+4. If a PDF is required, open each Office file in Word or PowerPoint and save it as PDF there, so the fonts stay exact.
 
 ## How to run it
 
