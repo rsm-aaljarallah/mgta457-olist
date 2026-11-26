@@ -9,7 +9,7 @@ Run from the repo root:  python3 tools/build_data_dictionary.py
 (needs tools/run_dbx.py, in this folder, and the Databricks CLI profile "chord")
 
 AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's script
-(see docs/ai_usage.md).
+(see docs/ai_usage.md). Revised with Claude, 2026-11-24: the declared keys are marked.
 """
 import os
 import sys
@@ -218,6 +218,7 @@ MEANING_BY_TABLE = {
     ("route_list", "excess_broken"): "Excess broken promises, rounded.",
     ("route_list", "margin_pts"): "95% margin in percentage points, as text; a dash under 100 orders, where the formula is not reliable.",
     ("region_fairness", "judged_orders"): "Judged orders of the region's customers.",
+    ("state_view", "highlight"): "Rio de Janeiro or Other states: the label Dashboard 3's scatter colors by.",
     ("silver_states", "region"): "IBGE region in English.",
     ("stg_geolocation", "state"): "State as written in geolocation (not used; rule 27).",
     ("stg_geolocation", "city"): "City as written in geolocation.",
@@ -247,6 +248,29 @@ catalog, info = {}, {t: (ty, c) for t, ty, c in tabs}
 for t, c, typ, com in cols:
     catalog.setdefault(t, []).append((c, typ, com))
 
+# The primary and foreign keys declared in 04_gold.sql (section 10), marked in the Meaning column.
+keys = run_dbx.run(
+    "SELECT k.table_name, k.column_name, t.constraint_type, p.table_name "
+    "FROM olist.information_schema.key_column_usage k "
+    "JOIN olist.information_schema.table_constraints t "
+    "  ON t.constraint_name = k.constraint_name AND t.constraint_schema = k.constraint_schema "
+    "LEFT JOIN olist.information_schema.referential_constraints r "
+    "  ON r.constraint_name = k.constraint_name AND r.constraint_schema = k.constraint_schema "
+    "LEFT JOIN olist.information_schema.table_constraints p "
+    "  ON p.constraint_name = r.unique_constraint_name AND p.constraint_schema = r.unique_constraint_schema "
+    "WHERE k.table_schema = 'analytics' ORDER BY 1, 3 DESC, 2")["result"]["data_array"]
+pk_size = {}
+for t, c, ctype, _ in keys:
+    if ctype == "PRIMARY KEY":
+        pk_size[t] = pk_size.get(t, 0) + 1
+key_note = {}
+for t, c, ctype, ref in keys:
+    if ctype == "PRIMARY KEY":
+        note = "Primary key" if pk_size[t] == 1 else "Part of the primary key"
+    else:
+        note = f"Foreign key to `{ref}`"
+    key_note.setdefault((t, c), []).append(note)
+
 listed = {t for _, ts in LAYERS for t in ts}
 missing_tables = sorted(set(catalog) - listed)
 if missing_tables:
@@ -255,7 +279,9 @@ if missing_tables:
 KIND = {"MANAGED": "table", "VIEW": "view", "METRIC_VIEW": "metric view"}
 out = ["# Data dictionary", "",
        "Every table and view in `olist.analytics`, built from the live catalog on the day of the last build. "
-       "Column names and types are exact. Measures of the metric view are queried with `MEASURE()`.", ""]
+       "Column names and types are exact. Measures of the metric view are queried with `MEASURE()`. "
+       "The primary and foreign keys declared in Unity Catalog (`04_gold.sql`, section 10) open the meaning "
+       "of their column.", ""]
 undocumented = []
 for layer, tables in LAYERS:
     out += [f"## {layer}", ""]
@@ -270,6 +296,9 @@ for layer, tables in LAYERS:
             if not meaning:
                 meaning = "(no description)"
                 undocumented.append(f"{t}.{c}")
+            if (t, c) in key_note:
+                notes = key_note[(t, c)]
+                meaning = "; ".join([notes[0]] + [n[0].lower() + n[1:] for n in notes[1:]]) + ". " + meaning
             out.append(f"| `{c}` | {typ.lower()} | {meaning} |")
         out.append("")
 

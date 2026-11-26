@@ -15,12 +15,16 @@
 --                                  Gold, next to the number in the doc
 -- Run:      Creates the three views and reads them. Safe to rerun.
 --           The views are recalculated every time they are read, so
---           the trust page always shows the current build.
+--           the trust page always shows the current build. The last
+--           statement is a gate: it fails the run if any pipeline
+--           check is not PASS.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24, following
 --           the checks of the Chord project. Revised with Claude,
 --           2026-11-24, after an audit: checks 5, 7, 8, 9, 13 and 14
 --           hardened, checks 22 to 24 added, 17 design-document
---           numbers added (see docs/ai_usage.md).
+--           numbers added (see docs/ai_usage.md). Revised with
+--           Claude, 2026-11-24: check 14 covers every declared key,
+--           and the gate (section 4) was added.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -153,16 +157,44 @@ CROSS JOIN (SELECT SUM(item_value) price, SUM(freight_value) freight, SUM(paymen
 CROSS JOIN (SELECT SUM(payment_value) paid FROM olist.analytics.silver_order_payments) p
 
 UNION ALL
--- 14. Every order points to a state in dim_state and to a day in
---     dim_date, and every seller to a state: the metric view joins on
---     these, so an order without a match would drop out of a filter.
-SELECT 14, 'every order has a known customer state and purchase day, every seller a known state',
-  CASE WHEN c.n = 0 AND d.n = 0 AND s.n = 0 THEN 'PASS' ELSE 'FAIL' END,
-  concat(c.n, ' orders without a known state, ', d.n, ' without a day in dim_date, ',
-         s.n, ' sellers without a known state')
-FROM (SELECT COUNT(*) n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.customer_state) c
-CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.purchase_date) d
-CROSS JOIN (SELECT COUNT(*) n FROM olist.analytics.dim_seller x LEFT ANTI JOIN olist.analytics.dim_state y ON y.state = x.seller_state) s
+-- 14. The star schema holds (04_gold.sql, section 10). Every one of the
+--     15 foreign keys finds its row, and so does every seller's state;
+--     an empty seller or route key, for an order with no single seller,
+--     is allowed. The keys of the three rule tables and of the item
+--     lines are not repeated (checks 10 and 12 cover the other tables).
+--     And the 9 primary and 15 foreign keys are declared: a rebuild of
+--     a table drops them, so a build that stopped before section 10
+--     fails here. Unity Catalog does not enforce declared keys, so this
+--     check does: the metric view joins on them, and an order without
+--     a match would drop out of a filter.
+SELECT 14, 'every key in Gold finds its row, and the 24 keys are declared',
+  CASE WHEN o.n = 0 AND d.n = 0 AND c.pk = 9 AND c.fk = 15 THEN 'PASS' ELSE 'FAIL' END,
+  concat(o.n, ' keys without a row, ', d.n, ' repeated keys; ',
+         c.pk, ' primary and ', c.fk, ' foreign keys declared')
+FROM (SELECT SUM(n) AS n FROM (
+        SELECT COUNT(*) AS n FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.customer_state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.seller_state WHERE f.seller_state IS NOT NULL
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_seller x ON x.seller_id = f.seller_id WHERE f.seller_id IS NOT NULL
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.purchase_date
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.promised_date WHERE f.promised_date IS NOT NULL
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_orders f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.delivered_date WHERE f.delivered_date IS NOT NULL
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.fact_orders x ON x.order_id = f.order_id
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.dim_product x ON x.product_id = f.product_id
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.dim_seller x ON x.seller_id = f.seller_id
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.seller_state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.customer_state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.fact_order_items f LEFT ANTI JOIN olist.analytics.dim_date x ON x.date_key = f.purchase_date
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.gold_routes f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.seller_state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.gold_routes f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.customer_state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.gold_states f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.state
+        UNION ALL SELECT COUNT(*) FROM olist.analytics.dim_seller f LEFT ANTI JOIN olist.analytics.dim_state x ON x.state = f.seller_state)) o
+CROSS JOIN (SELECT SUM(n) AS n FROM (
+        SELECT COUNT(*) - COUNT(DISTINCT order_id, order_item_id) AS n FROM olist.analytics.fact_order_items
+        UNION ALL SELECT COUNT(*) - COUNT(DISTINCT month_start) FROM olist.analytics.gold_months
+        UNION ALL SELECT COUNT(*) - COUNT(DISTINCT route) FROM olist.analytics.gold_routes
+        UNION ALL SELECT COUNT(*) - COUNT(DISTINCT state) FROM olist.analytics.gold_states)) d
+CROSS JOIN (SELECT COUNT_IF(constraint_type = 'PRIMARY KEY') AS pk, COUNT_IF(constraint_type = 'FOREIGN KEY') AS fk
+            FROM olist.information_schema.table_constraints WHERE table_schema = 'analytics') c
 
 UNION ALL
 -- 15. IBGE: 27 states, every one with a population, 208,494,900 in all.
@@ -650,3 +682,21 @@ SELECT
 FROM v;
 
 SELECT * FROM olist.analytics.design_doc_numbers;
+
+-- ------------------------------------------------------------
+-- 4. The gate: this last statement stops the run with an error when
+--    any pipeline check is not PASS. The rebuild job (README, "How to
+--    run it") runs 07_dashboard_views.sql and refreshes the dashboards
+--    only after this file succeeds, so the job never refreshes a
+--    dashboard from a build that failed a check. It does not undo the
+--    tables already rebuilt: the dashboards read them through views,
+--    so a refresh by hand would show them. A design-document number
+--    that DIFFERS does not stop the run: it means the document is out
+--    of date, not the data.
+-- ------------------------------------------------------------
+SELECT CASE WHEN failed = 0 THEN concat('All ', checks, ' pipeline checks pass')
+            ELSE raise_error(concat(failed, ' of ', checks,
+                 ' pipeline checks did not pass: see olist.analytics.pipeline_checks'))
+       END AS gate
+FROM (SELECT COUNT(*) AS checks, COUNT_IF(result <> 'PASS') AS failed
+      FROM olist.analytics.pipeline_checks);

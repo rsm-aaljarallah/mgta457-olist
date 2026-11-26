@@ -539,7 +539,33 @@
                   "fieldName": "customer_area",
                   "displayName": "Customer area",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Rio de Janeiro",
+                        "color": "#3A7DC9"
+                      },
+                      {
+                        "value": "Northeast",
+                        "color": "#FFAB00"
+                      },
+                      {
+                        "value": "Southeast without Rio",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "South",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Center-West",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "North",
+                        "color": "#919191"
+                      }
+                    ]
                   }
                 }
               },
@@ -547,7 +573,7 @@
                 "showTitle": true,
                 "title": "Broken-promise rate by month and area",
                 "showDescription": true,
-                "description": "Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least twice the median month. The Northeast breaks promises in ordinary months too. August 2018 is a partial month: about 30% of its orders were promised for September and are not judged."
+                "description": "Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least twice the median month. On average Rio (blue) jumps the most in those months; the Northeast (amber) has the highest rate in ordinary months too. August 2018 is a partial month: about 30% of its orders were promised for September and are not judged."
               }
             }
           },
@@ -555,7 +581,7 @@
             "x": 0,
             "y": 11,
             "width": 3,
-            "height": 6
+            "height": 7
           }
         },
         {
@@ -634,7 +660,11 @@
                 "description": "With no filter: promising later fixes less than a quarter of the problem, and less in the Northeast, where a late order typically arrives 8 days late."
               },
               "mark": {
-                "layout": "group"
+                "layout": "group",
+                "colors": [
+                  "#FF3621",
+                  "#919191"
+                ]
               }
             }
           },
@@ -642,7 +672,7 @@
             "x": 3,
             "y": 11,
             "width": 3,
-            "height": 6
+            "height": 7
           }
         },
         {
@@ -715,16 +745,20 @@
                 "showTitle": true,
                 "title": "Where the days go: purchase to carrier, carrier to customer",
                 "showDescription": true,
-                "description": "Judged orders that arrived, both parts measured on the same orders, so each bar adds up to the delivery time. Most of a broken promise's delay comes after the handover."
+                "description": "Judged orders that arrived, both parts measured on the same orders, so each bar adds up to the delivery time. Most of a broken promise's delay comes after the handover (blue)."
               },
               "mark": {
-                "layout": "stack"
+                "layout": "stack",
+                "colors": [
+                  "#919191",
+                  "#3A7DC9"
+                ]
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 17,
+            "y": 18,
             "width": 4,
             "height": 6
           }
@@ -767,15 +801,64 @@
                 "showTitle": true,
                 "title": "Late deliveries handed over on time",
                 "showDescription": true,
-                "description": "Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline."
+                "description": "Broken promises from one seller, by the seller's deadline"
               }
             }
           },
           "position": {
             "x": 4,
-            "y": 17,
+            "y": 18,
             "width": 2,
-            "height": 6
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "w_handed_kept",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_kept_handed_over_by_deadline)",
+                      "expression": "MEASURE(`share_kept_handed_over_by_deadline`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_kept_handed_over_by_deadline)",
+                  "displayName": "On-time deliveries handed over on time",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "On-time deliveries handed over on time",
+                "showDescription": true,
+                "description": "The same share for kept promises"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 21,
+            "width": 2,
+            "height": 3
           }
         }
       ]
@@ -1161,6 +1244,11 @@
                 "title": "Rows set aside, by reason",
                 "showDescription": true,
                 "description": "Quarantine rate is check 5: class thresholds warn 1%, escalate 3%, page 10%."
+              },
+              "mark": {
+                "colors": [
+                  "#919191"
+                ]
               }
             }
           },
@@ -1223,6 +1311,11 @@
                 "title": "Deliveries recorded per month",
                 "showDescription": true,
                 "description": "8,314 deliveries in August 2018, then 56 in September and 3 in October, so a promise is judged only if its day passed by August 31, 2018. Even so, the last days of August hold mostly orders that had already arrived."
+              },
+              "mark": {
+                "colors": [
+                  "#919191"
+                ]
               }
             }
           },

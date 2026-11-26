@@ -22,6 +22,7 @@ Every rate that a dashboard filter must recalculate is a measure in the metric v
 | Missed by 1 to 3 days | Share of all broken promises delivered 1 to 3 days late | measure `share_broken_missed_by_1_to_3_days` | 22.7% |
 | Median days late | Median days late of the broken promises that were delivered | measure `median_days_late` | 8 days in the Northeast |
 | Handed over by the deadline | Of delivered broken promises from one seller, the share whose carrier time is at or before the seller's deadline time (both are timestamps) | measure `share_late_handed_over_by_deadline` | 72.2% |
+| Handed over by the deadline, kept promises | The same share for kept promises from one seller, the comparison next to it on Dashboard 2 | measure `share_kept_handed_over_by_deadline` | 92.3% |
 | Days to carrier, carrier to customer | Average days from purchase to the carrier and from the carrier to the customer, both over the same judged orders: delivered, with both gaps measurable (dates in an impossible order are left out), so the two parts add up to the delivery time | measures `avg_days_to_carrier`, `avg_days_carrier_to_customer` | broken 6.0 + 27.9; kept 3.0 + 8.0 |
 | Median delivery days | Median days from purchase to delivery, judged orders | measure `median_delivery_days` | |
 
@@ -33,7 +34,7 @@ Every rate that a dashboard filter must recalculate is a measure in the metric v
 | Low reviews after a broken promise | Of the in-window orders with a low review, the share whose promise was broken. Canceled and unavailable orders count in the pile: their bad reviews are real, though they can never follow a broken promise | measure `share_low_reviews_after_broken_promise` | 36.7% |
 | Reviewed before arrival | Of delivered broken promises with a review, the share answered before the parcel arrived, comparing the two timestamps | measure `share_late_reviewed_before_arrival` | 70.1% |
 | Score before and after arrival | Average score of late orders reviewed before / after arrival | measures `avg_score_late_before_arrival`, `avg_score_late_after_arrival` | 1.65 / 3.72 |
-| Score, kept and broken | Average score of judged orders that kept / broke their promise | measures `avg_score_kept`, `avg_score_broken` | |
+| Score, kept and broken | Average score of judged orders that kept / broke their promise | measures `avg_score_kept`, `avg_score_broken` | 4.29 / 2.18 |
 
 ## Route and month rules
 
@@ -74,8 +75,9 @@ Every rate that a dashboard filter must recalculate is a measure in the metric v
 | Window ends a month earlier (July 31) | 8.7% | 689 | 647 |
 | Only parcels that arrived late count as broken | 6.8% | 591 | 579 |
 | Orders with dates in an impossible order left out | 8.7% | 675 | 632 |
+| Each order expects its category's national rate in its purchase month, not one national rate | 8.6% | 660 | 619 |
 
-Sao Paulo to Rio stays first, above the next nine routes together, in every row. With the window a week shorter the same ten routes stay on top; only the 8th and 9th swap. The review choice barely matters either: averaging an order's reviews instead of keeping the latest gives 14,160 low reviews instead of 14,205, 36.7% after a broken promise either way, and moves the average score by 0.0004 stars.
+Sao Paulo to Rio stays first, above the next nine routes together, in every row. With the window a week shorter the same ten routes stay on top; only the 8th and 9th swap. The last row asks whether the route or its mix is the problem: a route that sells slow categories, or sells in the busy months, should expect more broken promises. Adjusting for both moves Sao Paulo to Rio only from 678 to 660, so neither what it sells nor when it sells explains its excess; Minas Gerais to Rio replaces Sao Paulo to Para in tenth place (`sql/08_robustness.sql`). The review choice barely matters either: averaging an order's reviews instead of keeping the latest gives 14,160 low reviews instead of 14,205, 36.7% after a broken promise either way, and moves the average score by 0.0004 stars.
 
 ## Fairness
 

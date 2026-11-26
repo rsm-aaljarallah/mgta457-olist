@@ -6,7 +6,8 @@ teammate import the same dashboards into their own Databricks account
 (Dashboards > arrow next to Create dashboard > Import dashboard from file).
 The layout started from docs/dashboard_plan.json, the plan in the design
 document; the build adds one card, splits two charts and shows the fairness
-check as a table (19 visuals, against 16 sketched).
+check as a table, and five more cards put a comparison next to each headline
+number (24 visuals, against 16 sketched).
 
 The dashboards contain no business logic. Every widget either shows a column
 of a Gold table or view as it is, or asks the metric view
@@ -14,7 +15,8 @@ olist.analytics.delivery_metrics for a measure with MEASURE().
 Run:  python3 dashboards/build_dashboards.py   then   python3 tools/deploy_dashboards.py
 
 AI use: drafted with Claude (Anthropic), 2026-11-24, adapted from the
-dashboard script of the Chord project (see docs/ai_usage.md).
+dashboard script of the Chord project (see docs/ai_usage.md). Revised with
+Claude, 2026-11-24: one colour rule on every page and the comparison cards.
 """
 import json
 import os
@@ -26,11 +28,19 @@ PCT = {"type": "number-percent", "decimalPlaces": {"type": "max", "places": 1}}
 TWO = {"type": "number-plain", "decimalPlaces": {"type": "max", "places": 2}}
 ONE = {"type": "number-plain", "decimalPlaces": {"type": "max", "places": 1}}
 
-# Colour carries meaning only for the fix type and the check results.
+# Colour is used the same way on every page, and only where it carries meaning (Few:
+# colour what needs attention). In charts: gray is context; red marks broken promises
+# where a chart sets them against kept ones, or against a later promise; blue marks the
+# series the chart's note talks about (amber a second one, on the one chart that has
+# two). Tables have their own colour keys: the fix type and the check results.
 RED, AMBER, GREEN, GRAY, BLUE, TEAL = "#FF3621", "#FFAB00", "#00A972", "#919191", "#3A7DC9", "#7BC4C4"
+GRAY_DARK = "#5F6368"     # a second context series, next to GRAY
 RESULT_COLORS = {"PASS": GREEN, "MATCH": GREEN, "WARN": AMBER, "ESCALATE": AMBER, "PAGE": RED, "FAIL": RED,
                  "DIFFERS": AMBER}
 FIX_COLORS = {"Both": RED, "Lasting fix": AMBER, "Busy-season plan": BLUE, "Watch": GRAY}
+# Dashboard 3 is about local sellers, so their bar is the blue one.
+SELLER_COLORS = {"Same state as customer": BLUE, "Sao Paulo": GRAY, "Other state": GRAY,
+                 "Several sellers or no item": GRAY}
 
 
 # ---------------------------------------------------------------- datasets
@@ -88,8 +98,11 @@ def counter(name, title, field, fmt, description=None):
 
 
 def chart(name, kind, title, dataset, x, x_title, x_type, ys, y_title, fmt=None, is_measure=True,
-          description=None, sort_desc=False, color=None, color_title=None, colors=None, stack=False):
-    """ys: list of (field, label). color: a column that splits the series (one line per area, say)."""
+          description=None, sort_desc=False, color=None, color_title=None, colors=None, stack=False,
+          series_colors=None, hide_legend=False):
+    """ys: list of (field, label). color: a column that splits the series (one line per area, say),
+    with colors mapping its values to colours. series_colors: one colour per field of ys, in order.
+    hide_legend: when the axis already names what the colours mean."""
     fy = [(measure(n) if is_measure else col(n), label) for n, label in ys]
     scale = {"type": x_type}
     if sort_desc:
@@ -109,14 +122,23 @@ def chart(name, kind, title, dataset, x, x_title, x_type, ys, y_title, fmt=None,
         if colors:
             c["scale"]["mappings"] = [{"value": v, "color": k} for v, k in colors.items()]
         enc["color"] = c
-        fields.append(col(color))
+        if color != x:
+            fields.append(col(color))
+    if hide_legend:
+        enc.setdefault("color", {})["legend"] = {"hide": True}
     spec = {"version": 3, "widgetType": kind, "encodings": enc, "frame": frame(title, description)}
     if kind == "bar" and (len(fy) > 1 or color):
         spec["mark"] = {"layout": "stack" if stack else "group"}
+    if series_colors:
+        spec.setdefault("mark", {})["colors"] = series_colors
     return {"name": name, "queries": query(dataset, fields, disaggregated=not is_measure), "spec": spec}
 
 
-def scatter(name, title, dataset, x, x_title, y, y_title, color, color_title, extra, description=None):
+def scatter(name, title, dataset, x, x_title, y, y_title, color, color_title, extra, description=None,
+            colors=None):
+    scale = {"type": "categorical"}
+    if colors:
+        scale["mappings"] = [{"value": v, "color": k} for v, k in colors.items()]
     return {"name": name,
             "queries": query(dataset, [col(x), col(y), col(color)] + [col(e) for e, _ in extra], disaggregated=True),
             "spec": {"version": 3, "widgetType": "scatter",
@@ -125,7 +147,7 @@ def scatter(name, title, dataset, x, x_title, y, y_title, color, color_title, ex
                                "axis": {"title": x_title}},
                          "y": {"fieldName": y, "scale": {"type": "quantitative"}, "displayName": y_title,
                                "axis": {"title": y_title}},
-                         "color": {"fieldName": color, "displayName": color_title, "scale": {"type": "categorical"}},
+                         "color": {"fieldName": color, "displayName": color_title, "scale": scale},
                          "extra": [{"fieldName": e, "displayName": label} for e, label in extra]},
                      "frame": frame(title, description)}}
 
@@ -213,28 +235,40 @@ cost = dashboard(["metrics"], [("What broken promises cost", [
                         [("metrics", "customer_region")]), 2, 1, 2, 1),
     place(filter_widget("c_f_cat", "Product category", "filter-multi-select",
                         [("metrics", "category")]), 4, 1, 2, 1),
+    # Each headline card sits next to its comparison, the question Few asks of every number:
+    # compared to what?
     place(counter("c_rate", "Orders with a broken promise", "broken_rate", PCT,
-                  "Of judged orders"), 0, 2, 2, 3),
+                  "Of judged orders"), 0, 2, 2, 2),
     place(counter("c_low", "1-2 star reviews that follow a broken promise", "share_low_reviews_after_broken_promise",
-                  PCT, "Of in-window orders with a 1-2 star review"), 2, 2, 2, 3),
+                  PCT, "Of in-window orders with a 1-2 star review. Compare with the share of orders, on the "
+                       "left."), 2, 2, 2, 4),
     place(counter("c_before", "Late orders reviewed before they arrived", "share_late_reviewed_before_arrival", PCT,
-                  "No filter: 1.65 stars before, 3.72 after"), 4, 2, 2, 3),
+                  "Of delivered late orders with a review. Their scores are below."), 4, 2, 2, 2),
+    place(counter("c_kept", "Average review, promise kept", "avg_score_kept", TWO), 0, 4, 1, 2),
+    place(counter("c_broken", "Average review, promise broken", "avg_score_broken", TWO), 1, 4, 1, 2),
+    place(counter("c_score_before", "Score if reviewed before arrival", "avg_score_late_before_arrival", TWO),
+          4, 4, 1, 2),
+    place(counter("c_score_after", "Score if reviewed after arrival", "avg_score_late_after_arrival", TWO),
+          5, 4, 1, 2),
+    # Every bucket holds only kept or only broken promises, so the two measures stack into one
+    # bar per bucket, gray before the promised day and red after it.
     place(chart("c_bucket", "bar", "Review score by days before or after the promised day", "metrics",
                 "promise_bucket_label", "Delivered, compared with the promised day", "categorical",
-                [("avg_review_score", "Average review score")], "Average review score", TWO,
+                [("avg_score_kept", "Promise kept"), ("avg_score_broken", "Promise broken")],
+                "Average review score", TWO, stack=True, series_colors=[GRAY, RED],
                 description="The score holds while orders arrive early, then falls right after the promised day."),
-          0, 5, 3, 7),
+          0, 6, 3, 7),
     place(chart("c_band", "bar", "On time vs late, same delivery time", "metrics",
                 "delivery_time_band", "Days from purchase to delivery", "categorical",
                 [("avg_score_kept", "Promise kept"), ("avg_score_broken", "Promise broken")],
-                "Average review score", TWO,
+                "Average review score", TWO, series_colors=[GRAY, RED],
                 description="With no filter, late orders score lower in every band of the same delivery time, "
-                            "so the score follows the promise, not only the speed."), 3, 5, 3, 7),
+                            "so the score follows the promise, not only the speed."), 3, 6, 3, 7),
     place(text("c_note", "**Read with care.** Every link between promises and reviews is a correlation. "
                "The cheap test it points to: a delay notice with a new date, sent before the review survey to "
                "customers whose parcel will miss. Judged orders: bought from January 2017 and promised by "
                "August 31, 2018, not canceled or unavailable, and not one of 8 marked delivered with no delivery date; an order that never arrived counts as broken. Each "
-               "order counts its latest review once. Source: `olist.analytics.delivery_metrics`."), 0, 12, 6, 3),
+               "order counts its latest review once. Source: `olist.analytics.delivery_metrics`."), 0, 13, 6, 2),
 ])])
 
 # ---------------------------------------------------------------- dashboard 2
@@ -266,30 +300,36 @@ where = dashboard(["metrics", "routes", "checks", "rules", "quarantine", "delive
         place(chart("w_line", "line", "Broken-promise rate by month and area", "metrics", "purchase_month",
                     "Purchase month", "temporal", [("broken_rate", "Broken-promise rate")], "Broken-promise rate",
                     PCT, color="customer_area", color_title="Customer area",
+                    colors={"Rio de Janeiro": BLUE, "Northeast": AMBER, "Southeast without Rio": GRAY,
+                            "South": GRAY, "Center-West": GRAY, "North": GRAY},
                     description="Busy months: Nov 2017, Feb 2018 and Mar 2018, when the national rate was at least "
-                                "twice the median month. The Northeast breaks promises in ordinary months too. "
-                                "August 2018 is a partial month: about 30% of its orders were promised for "
-                                "September and are not judged."),
-              0, 10, 3, 6),
+                                "twice the median month. On average Rio (blue) jumps the most in those months; the "
+                                "Northeast (amber) has the highest rate in ordinary months too. August 2018 is a "
+                                "partial month: about 30% of its orders were promised for September and are not "
+                                "judged."),
+              0, 10, 3, 7),
         place(chart("w_later", "bar", "Now vs a promise 3 days later, by region", "metrics", "customer_region",
                     "Customer region", "categorical",
                     [("broken_rate", "Now"), ("broken_rate_if_3_days_later", "Promise 3 days later")],
-                    "Broken-promise rate", PCT, sort_desc=True,
+                    "Broken-promise rate", PCT, sort_desc=True, series_colors=[RED, GRAY],
                     description="With no filter: promising later fixes less than a quarter of the problem, and "
                                 "less in the Northeast, where a late order typically arrives 8 days late."),
-              3, 10, 3, 6),
+              3, 10, 3, 7),
         place(chart("w_days", "bar", "Where the days go: purchase to carrier, carrier to customer", "metrics",
                     "promise_outcome", "Promise", "categorical",
                     [("avg_days_to_carrier", "Purchase to carrier"),
                      ("avg_days_carrier_to_customer", "Carrier to customer")],
-                    "Average days", ONE, stack=True,
+                    "Average days", ONE, stack=True, series_colors=[GRAY, BLUE],
                     description="Judged orders that arrived, both parts measured on the same orders, so each bar "
                                 "adds up to the delivery time. Most of a broken promise's delay comes after the "
-                                "handover."), 0, 16, 4, 6),
+                                "handover (blue)."), 0, 17, 4, 6),
+        # Handed over on time = handed to the carrier by the seller's deadline.
         place(counter("w_handed", "Late deliveries handed over on time", "share_late_handed_over_by_deadline", PCT,
-                      "Of delivered broken promises from one seller, the share handed to the carrier by the "
-                      "seller's deadline."),
-              4, 16, 2, 6),
+                      "Broken promises from one seller, by the seller's deadline"),
+              4, 17, 2, 3),
+        place(counter("w_handed_kept", "On-time deliveries handed over on time", "share_kept_handed_over_by_deadline",
+                      PCT, "The same share for kept promises"),
+              4, 20, 2, 3),
     ]),
     ("Can we trust it", [
         place(text("t_title", "# Can we trust it\nThe checks the pipeline ran, what each cleaning rule did, the "
@@ -312,11 +352,12 @@ where = dashboard(["metrics", "routes", "checks", "rules", "quarantine", "delive
         ], description="The rules and their reasons are in docs/data_quality_log.md."), 0, 11, 4, 10),
         place(chart("t_quarantine", "bar", "Rows set aside, by reason", "quarantine", "table_and_reason",
                     "Table: reason", "categorical", [("row_count", "Rows")], "Rows", is_measure=False,
-                    sort_desc=True, description="Quarantine rate is check 5: class thresholds warn 1%, "
-                                                "escalate 3%, page 10%."), 4, 11, 2, 10),
+                    sort_desc=True, series_colors=[GRAY],
+                    description="Quarantine rate is check 5: class thresholds warn 1%, "
+                                "escalate 3%, page 10%."), 4, 11, 2, 10),
         place(chart("t_deliveries", "bar", "Deliveries recorded per month", "deliveries", "delivery_month",
                     "Month delivered", "temporal", [("deliveries", "Deliveries")], "Deliveries", is_measure=False,
-                    description="8,314 deliveries in August 2018, then 56 in September and 3 in October, so a "
+                    series_colors=[GRAY], description="8,314 deliveries in August 2018, then 56 in September and 3 in October, so a "
                                 "promise is judged only if its day passed by August 31, 2018. Even so, the last "
                                 "days of August hold mostly orders that had already arrived."), 0, 21, 3, 6),
         place(table("t_fair", "Fairness: broken-promise rate by region, with margins", "fairness", [
@@ -342,30 +383,34 @@ local = dashboard(["metrics", "states"], [("Where local sellers would help", [
                         [("metrics", "category")]), 4, 1, 2, 1),
     place(scatter("l_scatter", "States: orders per 100,000 residents vs broken-promise rate", "states",
                   "orders_per_100k", "Orders per 100,000 residents (12 months to Aug 2018)",
-                  "broken_pct", "Broken %", "region", "Region",
-                  [("state_name", "State"), ("active_sellers_per_million", "Active sellers per million"),
+                  "broken_pct", "Broken %", "highlight", "State",
+                  [("state_name", "State"), ("region", "Region"),
+                   ("active_sellers_per_million", "Active sellers per million"),
                    ("pct_orders_from_other_state", "% of single-seller orders from another state")],
+                  colors={"Rio de Janeiro": BLUE, "Other states": GRAY},
                   description="Each dot is a state: orders per 100,000 residents (IBGE 2018 population) in the 12 "
                               "months to August 2018, against the broken-promise rate over the whole window. Rio "
-                              "buys 56.4 against 71.7 in Sao Paulo, with a quarter of Sao Paulo's sellers per "
-                              "resident. Only the region filter applies here."), 0, 2, 3, 9),
+                              "(blue) buys 56.4 against 71.7 in Sao Paulo, the dot furthest right, with a quarter "
+                              "of Sao Paulo's sellers per resident. Only the region filter applies here."), 0, 2, 3, 9),
     place(chart("l_rate", "bar", "Local vs Sao Paulo sellers: broken-promise rate", "metrics", "seller_location",
                 "Seller", "categorical", [("broken_rate", "Broken-promise rate")], "Broken-promise rate", PCT,
+                color="seller_location", colors=SELLER_COLORS, stack=True, hide_legend=True,
                 description="Pick one customer state above. Example, Rio de Janeiro with no other filter: local "
-                            "sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy months "
-                            "(4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several sellers or "
-                            "no item' holds the orders with no single seller."), 3, 2, 3, 9),
+                            "sellers (blue) 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy "
+                            "months (4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several "
+                            "sellers or no item' holds the orders with no single seller."), 3, 2, 3, 9),
     place(chart("l_days", "bar", "Local vs Sao Paulo sellers: median days to deliver", "metrics",
                 "seller_location", "Seller", "categorical", [("median_delivery_days", "Median days")],
                 "Median days from purchase to delivery", ONE,
+                color="seller_location", colors=SELLER_COLORS, stack=True, hide_legend=True,
                 description="Local sellers may sell different products, so this is a correlation: a recruiting "
                             "pilot has to prove the speed."), 0, 11, 6, 6),
     place(chart("l_shares", "bar", "Share of orders, sellers and funnel recruits, by state", "states", "state",
                 "Customer or seller state", "categorical",
                 [("pct_of_orders", "% of orders (12 months)"), ("pct_of_sellers", "% of all sellers"),
                  ("pct_of_funnel_recruits", "% of funnel recruits who sold")],
-                "Percent", ONE, is_measure=False, sort_desc=True,
-                description="The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and "
+                "Percent", ONE, is_measure=False, sort_desc=True, series_colors=[GRAY, GRAY_DARK, BLUE],
+                description="The funnel recruits (blue) where sellers already are: Sao Paulo holds 59.7% of sellers and "
                             "61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%. The "
                             "region filter narrows the states shown; the state and category filters do not apply "
                             "here."),

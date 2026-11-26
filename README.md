@@ -8,10 +8,10 @@
 | --- | --- |
 | Dashboard design document, 2 to 5 pages with sketches and user flow | `deliverables/olist_design_document.docx` (5 pages), source `docs/design_doc.md` |
 | Databricks lakehouse: curated Unity Catalog tables | catalog `olist` (schemas `raw` and `analytics`), see "In Databricks" below |
-| SQL workflow, the transformation layer | `sql/00_setup.sql` to `sql/07_dashboard_views.sql` |
+| SQL workflow, the transformation layer | `sql/00_setup.sql` to `sql/07_dashboard_views.sql`; files 03 to 07 also run in order as the Databricks job "Olist rebuild: Silver to dashboards". `sql/08_robustness.sql` is read-only |
 | Final project documentation | `deliverables/olist_final_documentation.docx`: overview, lineage, metric dictionary, data dictionary, data quality log, AI usage log |
-| Dashboard files: 3 dashboards, 4 pages, 19 visuals | `dashboards/*.lvdash.json`, published in Databricks AI/BI (accepted by the professor in place of Power BI) |
-| Final presentation, 10 to 15 minutes | `deliverables/olist_presentation.pptx` (11 slides, speaker notes), outline in `docs/presentation_outline.md` |
+| Dashboard files: 3 dashboards, 4 pages, 24 visuals | `dashboards/*.lvdash.json`, published in Databricks AI/BI (accepted by the professor in place of Power BI) |
+| Final presentation, 10 to 15 minutes | `deliverables/olist_presentation.pptx` (12 slides, speaker notes), outline in `docs/presentation_outline.md` |
 
 ## The data
 
@@ -31,16 +31,17 @@ Where each file came from, its license and its SHA-256 hash are in [docs/sources
 | `olist.raw` | Bronze: the 13 files as delivered, every CSV column as text. Loaded once, never edited |
 | `olist.raw.landing_zone` | The volume with the downloaded files, one folder per source |
 | `olist.analytics` | Everything we build, listed below |
+| Job "Olist rebuild: Silver to dashboards" | Runs files 03 to 07 in order, stops if a check fails, then refreshes the three dashboards. Settings in `jobs/olist_rebuild.json`, id in `jobs/job_id.json` |
 
 What `olist.analytics` holds:
 
 | Layer | Objects |
 | --- | --- |
 | Silver (`03_silver.sql`) | `silver_orders`, `silver_order_items`, `silver_order_payments`, `silver_order_reviews`, `silver_customers`, `silver_sellers`, `silver_products`, `silver_geolocation`, `silver_leads`, `silver_closed_deals`, `silver_states`; `quarantine` (every row set aside, with its reason); the `stg_` views that type the rows and apply the quarantine rules |
-| Gold (`04_gold.sql`) | `fact_orders` (one row per order), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures) |
+| Gold (`04_gold.sql`) | `fact_orders` (one row per order), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures); 9 primary and 15 foreign keys declared in Unity Catalog |
 | Metric view (`05_metric_view.sql`) | `delivery_metrics`: every rate a dashboard filter recalculates |
 | Dashboard views (`07_dashboard_views.sql`) | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` |
-| Checks (`06_checks.sql`) | `pipeline_checks` (24 checks; every row should say PASS), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's results recomputed from Gold) |
+| Checks (`06_checks.sql`) | `pipeline_checks` (24 checks; every row should say PASS, and the file's last statement fails the run if one does not), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's results recomputed from Gold) |
 
 ## Documents and how they are built
 
@@ -71,6 +72,9 @@ Run each SQL file in the Databricks SQL editor, in order, or from this folder wi
 8. `sql/06_checks.sql`: the audit. Do not build or refresh a dashboard unless every row of `pipeline_checks` says PASS.
 9. `sql/07_dashboard_views.sql`: the small views the dashboards read besides the metric view.
 10. `python3 dashboards/build_dashboards.py`, then `python3 tools/deploy_dashboards.py`: writes the three `.lvdash.json` files, then creates or updates and publishes the dashboards (ids in `dashboards/dash_ids.json`). A teammate can instead import the `.lvdash.json` files into their own workspace.
+11. `sql/08_robustness.sql`: read-only. Asks whether Sao Paulo to Rio's excess survives an adjustment for what it sells and when, and whether customers whose promise broke come back less; each query lists the value we expect.
+
+Steps 5 to 9 and the dashboard refresh also run as one Databricks job: `python3 tools/deploy_job.py --run` copies files 03 to 07 to the workspace folder `mgta457-olist/sql`, creates or updates the job and runs it, printing each task's result. The job stops before the dashboard views if any check fails. It has no schedule, because the data does not change.
 
 ## Dashboards
 
@@ -82,7 +86,7 @@ Published in the Databricks workspace on 2026-11-24 and checked page by page in 
 | Olist 2 - Where promises break | Head of Logistics | 2: the routes, and "Can we trust it" |
 | Olist 3 - Where local sellers would help | Head of Seller Acquisition | 1 |
 
-They read only the metric view `delivery_metrics`, the views of `07_dashboard_views.sql` and two check views, so they do no calculation. Published dashboards show cached results until someone clicks refresh. Only AJ's account and the workspace admins can open them: share them from the dashboard's Share button, or import the `.lvdash.json` files into another workspace.
+They read only the metric view `delivery_metrics`, the views of `07_dashboard_views.sql` and two check views, so they do no calculation. Colour works the same way on every page: gray is context, red sets broken promises against kept or later ones, and blue marks what a chart's note talks about; the tables colour only the fix type and the check results. Every headline card sits next to its comparison. Published dashboards show cached results until someone clicks refresh. Only AJ's account and the workspace admins can open them: share them from the dashboard's Share button, or import the `.lvdash.json` files into another workspace.
 
 ## Design document numbers
 
@@ -98,6 +102,15 @@ Every number was checked a second way before submission:
 
 What changed: routes with fewer than 100 orders no longer get a fix type (they are "Watch"); the two "where the days go" averages now use the same orders; a missing order status is set aside; the Fernando de Noronha islands, which are Brazilian, are no longer set aside as points outside Brazil; city matching also removes an accent typed as a separate mark; six checks were made stricter and three added (stored rates agree with the metric view, typing lost nothing, days are the days written in the files); 17 more design-document numbers are recomputed by `design_doc_numbers`; and wording that did not match the build was corrected. No headline number changed. The audit also found that, for Rio customers, most of the local sellers' edge in broken promises comes from the busy months; the design document now says so. `docs/metric_dictionary.md` shows how the answer holds up under other definitions.
 
+## After the audit, 2026-11-24
+
+Four changes followed the audit. None moves a number: all 24 checks pass and all 56 design-document numbers match.
+
+- **Keys.** The Gold tables declare 9 primary and 15 foreign keys in Unity Catalog, so Catalog Explorer draws the star schema. Unity Catalog does not enforce declared keys, so checks 10, 12 and 14 test them on every build, and check 14 also confirms that all 24 are declared.
+- **A gate and a job.** `06_checks.sql` ends with a statement that fails the run when any check is not PASS, and the Databricks job runs files 03 to 07 and refreshes the dashboards only after it passes.
+- **Dashboards.** Colour used the same way on every page, and a comparison next to every headline card: the average review of kept and broken promises (4.29 and 2.18), the scores of late orders reviewed before and after arrival (1.65 and 3.72), and the share of on-time deliveries handed over on time (92.3%, next to 72.2% for late ones). One new measure (`share_kept_handed_over_by_deadline`) and one label column (`state_view.highlight`) serve them; the dashboards now hold 24 visuals.
+- **Robustness.** `sql/08_robustness.sql` answers two likely questions. Adjusting for what a route sells and when it sells moves Sao Paulo to Rio's excess only from 678 to 660, so it stays first (a new row in the metric dictionary's sensitivity table). Customers whose first promise broke came back within 180 days at 1.3% against 1.7%, but the whole gap sits in the Southeast, so the dashboards do not claim a cost in repeat business.
+
 ## What the profile found
 
 All written up in [docs/data_quality_log.md](docs/data_quality_log.md):
@@ -112,7 +125,7 @@ All written up in [docs/data_quality_log.md](docs/data_quality_log.md):
 
 ## References
 
-[docs/references/](docs/references/README.md) keeps the two guides we designed against: the ONS guide to choosing a chart type, and Kimball's article on fact and dimension tables. Its notes check every dashboard chart and the Gold layer against them, and name the two places where we depart on purpose.
+[docs/references/](docs/references/README.md) keeps the two guides we designed against: the ONS guide to choosing a chart type, and Kimball's article on fact and dimension tables. Its notes check every dashboard chart and the Gold layer against them, and name the two places where we depart on purpose. They also cite Stephen Few's "Why Most Dashboards Fail", behind the comparison next to each headline card.
 
 ## Rules carried over from the Chord project
 

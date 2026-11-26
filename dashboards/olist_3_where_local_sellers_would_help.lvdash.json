@@ -217,12 +217,16 @@
                       "expression": "`broken_pct`"
                     },
                     {
-                      "name": "region",
-                      "expression": "`region`"
+                      "name": "highlight",
+                      "expression": "`highlight`"
                     },
                     {
                       "name": "state_name",
                       "expression": "`state_name`"
+                    },
+                    {
+                      "name": "region",
+                      "expression": "`region`"
                     },
                     {
                       "name": "active_sellers_per_million",
@@ -262,16 +266,30 @@
                   }
                 },
                 "color": {
-                  "fieldName": "region",
-                  "displayName": "Region",
+                  "fieldName": "highlight",
+                  "displayName": "State",
                   "scale": {
-                    "type": "categorical"
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Rio de Janeiro",
+                        "color": "#3A7DC9"
+                      },
+                      {
+                        "value": "Other states",
+                        "color": "#919191"
+                      }
+                    ]
                   }
                 },
                 "extra": [
                   {
                     "fieldName": "state_name",
                     "displayName": "State"
+                  },
+                  {
+                    "fieldName": "region",
+                    "displayName": "Region"
                   },
                   {
                     "fieldName": "active_sellers_per_million",
@@ -287,7 +305,7 @@
                 "showTitle": true,
                 "title": "States: orders per 100,000 residents vs broken-promise rate",
                 "showDescription": true,
-                "description": "Each dot is a state: orders per 100,000 residents (IBGE 2018 population) in the 12 months to August 2018, against the broken-promise rate over the whole window. Rio buys 56.4 against 71.7 in Sao Paulo, with a quarter of Sao Paulo's sellers per resident. Only the region filter applies here."
+                "description": "Each dot is a state: orders per 100,000 residents (IBGE 2018 population) in the 12 months to August 2018, against the broken-promise rate over the whole window. Rio (blue) buys 56.4 against 71.7 in Sao Paulo, the dot furthest right, with a quarter of Sao Paulo's sellers per resident. Only the region filter applies here."
               }
             }
           },
@@ -350,13 +368,44 @@
                   },
                   "fieldName": "measure(broken_rate)",
                   "displayName": "Broken-promise rate"
+                },
+                "color": {
+                  "fieldName": "seller_location",
+                  "displayName": "seller_location",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Same state as customer",
+                        "color": "#3A7DC9"
+                      },
+                      {
+                        "value": "Sao Paulo",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Other state",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Several sellers or no item",
+                        "color": "#919191"
+                      }
+                    ]
+                  },
+                  "legend": {
+                    "hide": true
+                  }
                 }
               },
               "frame": {
                 "showTitle": true,
                 "title": "Local vs Sao Paulo sellers: broken-promise rate",
                 "showDescription": true,
-                "description": "Pick one customer state above. Example, Rio de Janeiro with no other filter: local sellers 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy months (4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several sellers or no item' holds the orders with no single seller."
+                "description": "Pick one customer state above. Example, Rio de Janeiro with no other filter: local sellers (blue) 7.7% (+/- 1.7), Sao Paulo sellers 17.1%. Most of that gap is in the busy months (4.1% against 39.8%); in the other months it is 8.7% against 10.0%. 'Several sellers or no item' holds the orders with no single seller."
+              },
+              "mark": {
+                "layout": "stack"
               }
             }
           },
@@ -419,6 +468,34 @@
                   },
                   "fieldName": "measure(median_delivery_days)",
                   "displayName": "Median days"
+                },
+                "color": {
+                  "fieldName": "seller_location",
+                  "displayName": "seller_location",
+                  "scale": {
+                    "type": "categorical",
+                    "mappings": [
+                      {
+                        "value": "Same state as customer",
+                        "color": "#3A7DC9"
+                      },
+                      {
+                        "value": "Sao Paulo",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Other state",
+                        "color": "#919191"
+                      },
+                      {
+                        "value": "Several sellers or no item",
+                        "color": "#919191"
+                      }
+                    ]
+                  },
+                  "legend": {
+                    "hide": true
+                  }
                 }
               },
               "frame": {
@@ -426,6 +503,9 @@
                 "title": "Local vs Sao Paulo sellers: median days to deliver",
                 "showDescription": true,
                 "description": "Local sellers may sell different products, so this is a correlation: a recruiting pilot has to prove the speed."
+              },
+              "mark": {
+                "layout": "stack"
               }
             }
           },
@@ -517,10 +597,15 @@
                 "showTitle": true,
                 "title": "Share of orders, sellers and funnel recruits, by state",
                 "showDescription": true,
-                "description": "The funnel recruits where sellers already are: Sao Paulo holds 59.7% of sellers and 61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%. The region filter narrows the states shown; the state and category filters do not apply here."
+                "description": "The funnel recruits (blue) where sellers already are: Sao Paulo holds 59.7% of sellers and 61.1% of funnel recruits who sold, while Rio, with 12.7% of orders, got 6.8%. The region filter narrows the states shown; the state and category filters do not apply here."
               },
               "mark": {
-                "layout": "group"
+                "layout": "group",
+                "colors": [
+                  "#919191",
+                  "#5F6368",
+                  "#3A7DC9"
+                ]
               }
             }
           },

@@ -216,7 +216,7 @@
             "x": 0,
             "y": 3,
             "width": 2,
-            "height": 3
+            "height": 2
           }
         },
         {
@@ -257,7 +257,7 @@
                 "showTitle": true,
                 "title": "1-2 star reviews that follow a broken promise",
                 "showDescription": true,
-                "description": "Of in-window orders with a 1-2 star review"
+                "description": "Of in-window orders with a 1-2 star review. Compare with the share of orders, on the left."
               }
             }
           },
@@ -265,7 +265,7 @@
             "x": 2,
             "y": 3,
             "width": 2,
-            "height": 3
+            "height": 4
           }
         },
         {
@@ -306,7 +306,7 @@
                 "showTitle": true,
                 "title": "Late orders reviewed before they arrived",
                 "showDescription": true,
-                "description": "No filter: 1.65 stars before, 3.72 after"
+                "description": "Of delivered late orders with a review. Their scores are below."
               }
             }
           },
@@ -314,7 +314,195 @@
             "x": 4,
             "y": 3,
             "width": 2,
-            "height": 3
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_kept",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(avg_score_kept)",
+                      "expression": "MEASURE(`avg_score_kept`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(avg_score_kept)",
+                  "displayName": "Average review, promise kept",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average review, promise kept"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_broken",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(avg_score_broken)",
+                      "expression": "MEASURE(`avg_score_broken`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(avg_score_broken)",
+                  "displayName": "Average review, promise broken",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Average review, promise broken"
+              }
+            }
+          },
+          "position": {
+            "x": 1,
+            "y": 5,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_score_before",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(avg_score_late_before_arrival)",
+                      "expression": "MEASURE(`avg_score_late_before_arrival`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(avg_score_late_before_arrival)",
+                  "displayName": "Score if reviewed before arrival",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Score if reviewed before arrival"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 5,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_score_after",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(avg_score_late_after_arrival)",
+                      "expression": "MEASURE(`avg_score_late_after_arrival`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(avg_score_late_after_arrival)",
+                  "displayName": "Score if reviewed after arrival",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 2
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Score if reviewed after arrival"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 5,
+            "width": 1,
+            "height": 2
           }
         },
         {
@@ -331,8 +519,12 @@
                       "expression": "`promise_bucket_label`"
                     },
                     {
-                      "name": "measure(avg_review_score)",
-                      "expression": "MEASURE(`avg_review_score`)"
+                      "name": "measure(avg_score_kept)",
+                      "expression": "MEASURE(`avg_score_kept`)"
+                    },
+                    {
+                      "name": "measure(avg_score_broken)",
+                      "expression": "MEASURE(`avg_score_broken`)"
                     }
                   ],
                   "disaggregated": false
@@ -367,8 +559,16 @@
                       "places": 2
                     }
                   },
-                  "fieldName": "measure(avg_review_score)",
-                  "displayName": "Average review score"
+                  "fields": [
+                    {
+                      "fieldName": "measure(avg_score_kept)",
+                      "displayName": "Promise kept"
+                    },
+                    {
+                      "fieldName": "measure(avg_score_broken)",
+                      "displayName": "Promise broken"
+                    }
+                  ]
                 }
               },
               "frame": {
@@ -376,12 +576,19 @@
                 "title": "Review score by days before or after the promised day",
                 "showDescription": true,
                 "description": "The score holds while orders arrive early, then falls right after the promised day."
+              },
+              "mark": {
+                "layout": "stack",
+                "colors": [
+                  "#919191",
+                  "#FF3621"
+                ]
               }
             }
           },
           "position": {
             "x": 0,
-            "y": 6,
+            "y": 7,
             "width": 3,
             "height": 7
           }
@@ -459,13 +666,17 @@
                 "description": "With no filter, late orders score lower in every band of the same delivery time, so the score follows the promise, not only the speed."
               },
               "mark": {
-                "layout": "group"
+                "layout": "group",
+                "colors": [
+                  "#919191",
+                  "#FF3621"
+                ]
               }
             }
           },
           "position": {
             "x": 3,
-            "y": 6,
+            "y": 7,
             "width": 3,
             "height": 7
           }
@@ -481,9 +692,9 @@
           },
           "position": {
             "x": 0,
-            "y": 13,
+            "y": 14,
             "width": 6,
-            "height": 3
+            "height": 2
           }
         }
       ]

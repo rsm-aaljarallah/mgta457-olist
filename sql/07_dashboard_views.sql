@@ -4,7 +4,8 @@
 -- Owner:    TODO name
 -- Purpose:  The small views the dashboards read besides the metric
 --           view. route_list and state_view pick, rename and round
---           columns of a Gold table; region_fairness asks the metric
+--           columns of a Gold table (state_view also labels the state
+--           one chart highlights); region_fairness asks the metric
 --           view; deliveries_per_month and quarantine_summary count
 --           rows of Gold and of the quarantine. So the dashboards
 --           themselves never calculate. Percentages arrive on a 0 to
@@ -15,6 +16,8 @@
 --           Revised with Claude, 2026-11-24, after an audit: two views
 --           now read the metric view and Gold dates, and route_list
 --           shows a dash for the margin of routes under 100 orders.
+--           Revised with Claude, 2026-11-24: state_view gained the
+--           highlight label for Dashboard 3's scatter.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -94,7 +97,10 @@ SELECT
   ROUND(100 * share_from_other_state_12m, 1)    AS pct_orders_from_other_state,
   ROUND(100 * share_of_orders_12m, 1)           AS pct_of_orders,
   ROUND(100 * share_of_sellers, 1)              AS pct_of_sellers,
-  ROUND(100 * share_of_funnel_sellers, 1)       AS pct_of_funnel_recruits
+  ROUND(100 * share_of_funnel_sellers, 1)       AS pct_of_funnel_recruits,
+  -- The scatter colors the state its note talks about and leaves the
+  -- rest gray. A label for the chart, not a measure.
+  CASE WHEN state = 'RJ' THEN 'Rio de Janeiro' ELSE 'Other states' END AS highlight
 FROM olist.analytics.gold_states;
 
 SELECT * FROM olist.analytics.route_list ORDER BY excess_rank LIMIT 12;

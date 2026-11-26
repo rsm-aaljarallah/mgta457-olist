@@ -15,6 +15,8 @@
 --           (see docs/ai_usage.md).
 --           Revised with Claude, 2026-11-24, after an audit: the two days
 --           measures use the same orders; label and comment fixes.
+--           Revised with Claude, 2026-11-24: share_kept_handed_over_by_
+--           deadline added, the comparison on Dashboard 2.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -170,6 +172,9 @@ AS $$
     - name: share_late_handed_over_by_deadline
       expr: AVG(CASE WHEN source.is_broken = 1 AND source.delivered_ts IS NOT NULL THEN CAST(source.handed_over_by_deadline AS INT) END)
       comment: "Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline (carrier time at or before the deadline time)"
+    - name: share_kept_handed_over_by_deadline
+      expr: AVG(CASE WHEN source.is_judged AND source.is_broken = 0 THEN CAST(source.handed_over_by_deadline AS INT) END)
+      comment: "The same share for kept promises from one seller, the comparison for share_late_handed_over_by_deadline (a kept promise was always delivered)"
     - name: avg_days_to_carrier
       expr: AVG(CASE WHEN source.is_judged AND source.days_to_carrier IS NOT NULL AND source.days_carrier_to_customer IS NOT NULL THEN source.days_to_carrier END)
       comment: "Average days from purchase to the carrier, judged orders that arrived and whose two gaps are both measured, so it stacks with avg_days_carrier_to_customer"

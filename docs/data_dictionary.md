@@ -1,6 +1,6 @@
 # Data dictionary
 
-Every table and view in `olist.analytics`, built from the live catalog on the day of the last build. Column names and types are exact. Measures of the metric view are queried with `MEASURE()`.
+Every table and view in `olist.analytics`, built from the live catalog on the day of the last build. Column names and types are exact. Measures of the metric view are queried with `MEASURE()`. The primary and foreign keys declared in Unity Catalog (`04_gold.sql`, section 10) open the meaning of their column.
 
 ## Gold: the star schema
 
@@ -10,25 +10,25 @@ Table. Gold fact. One row per order: promise, delivery, broken-promise outcome, 
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `order_id` | string | Order id. |
+| `order_id` | string | Primary key. Order id. |
 | `customer_id` | string | Customer record on one order. The person is `customer_unique_id`. |
 | `customer_unique_id` | string | The person who bought (one person can have several `customer_id`). |
-| `customer_state` | string | Customer state. |
+| `customer_state` | string | Foreign key to `dim_state`. Customer state. |
 | `order_status` | string | Status as recorded: delivered, shipped, canceled, unavailable, invoiced, processing, created, approved. |
 | `purchase_ts` | timestamp | When the order was bought. |
-| `purchase_date` | date | Day the order was bought. |
+| `purchase_date` | date | Foreign key to `dim_date`. Day the order was bought. |
 | `approved_ts` | timestamp | When payment was approved. |
 | `carrier_ts` | timestamp | When the seller handed the order to the carrier. |
 | `delivered_ts` | timestamp | When the customer received the order. |
-| `delivered_date` | date | Day the customer received the order. |
-| `promised_date` | date | Delivery day promised at checkout. It has no time of day. |
+| `delivered_date` | date | Foreign key to `dim_date`. Day the customer received the order. |
+| `promised_date` | date | Foreign key to `dim_date`. Delivery day promised at checkout. It has no time of day. |
 | `item_count` | bigint | Item lines in the order. |
 | `item_value` | decimal(20,2) | Sum of item prices, BRL. |
 | `freight_value` | decimal(20,2) | Freight charged, BRL. |
 | `payment_value` | decimal(20,2) | Amount paid, BRL. On `fact_orders`, all payments of the order summed (rule 15). |
 | `seller_count` | bigint | Distinct sellers in the order. |
-| `seller_id` | string | Seller id. On `fact_orders`, empty when several sellers shipped the order. |
-| `seller_state` | string | Seller state. On `fact_orders`, empty when several sellers shipped the order. |
+| `seller_id` | string | Foreign key to `dim_seller`. Seller id. On `fact_orders`, empty when several sellers shipped the order. |
+| `seller_state` | string | Foreign key to `dim_state`. Seller state. On `fact_orders`, empty when several sellers shipped the order. |
 | `seller_deadline_ts` | timestamp | Latest item deadline, single-seller orders only; deadlines in 2019 or later left out. |
 | `category` | string | Product category in English (Portuguese when no translation, `unknown` when blank). On `fact_orders`, the first item's category. |
 | `review_id` | string | Review id. One review can cover several orders bought together. |
@@ -66,13 +66,13 @@ Table. Gold fact. One row per item line (order_id + order_item_id): product, sel
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `order_id` | string | Order id. |
-| `order_item_id` | int | Item line number within the order (1, 2, ...). |
-| `product_id` | string | Product id. |
-| `seller_id` | string | Seller id. On `fact_orders`, empty when several sellers shipped the order. |
-| `seller_state` | string | Seller state. On `fact_orders`, empty when several sellers shipped the order. |
-| `customer_state` | string | Customer state. |
-| `purchase_date` | date | Day the order was bought. |
+| `order_id` | string | Part of the primary key; foreign key to `fact_orders`. Order id. |
+| `order_item_id` | int | Part of the primary key. Item line number within the order (1, 2, ...). |
+| `product_id` | string | Foreign key to `dim_product`. Product id. |
+| `seller_id` | string | Foreign key to `dim_seller`. Seller id. On `fact_orders`, empty when several sellers shipped the order. |
+| `seller_state` | string | Foreign key to `dim_state`. Seller state. On `fact_orders`, empty when several sellers shipped the order. |
+| `customer_state` | string | Foreign key to `dim_state`. Customer state. |
+| `purchase_date` | date | Foreign key to `dim_date`. Day the order was bought. |
 | `shipping_limit_ts` | timestamp | The seller's deadline to hand the item to the carrier. |
 | `price` | decimal(10,2) | Item price, BRL. |
 | `freight_value` | decimal(10,2) | Freight charged, BRL. |
@@ -85,7 +85,7 @@ Table. Gold dimension. One row per day, September 2016 to December 2018, with mo
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `date_key` | date | Calendar day. |
+| `date_key` | date | Primary key. Calendar day. |
 | `month_start` | date | First day of the month. |
 | `year` | int | Year. |
 | `month` | int | Month number. |
@@ -99,7 +99,7 @@ Table. Gold dimension. One row per Brazilian state: name, region, area (Southeas
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `state` | string | State, two letters (SP, RJ, ...). |
+| `state` | string | Primary key. State, two letters (SP, RJ, ...). |
 | `state_name` | string | State name (IBGE spelling). |
 | `state_code` | int | IBGE numeric state code (35 = Sao Paulo). |
 | `region` | string | IBGE region in English: North, Northeast, Southeast, South, Center-West. |
@@ -112,7 +112,7 @@ Table. Gold dimension. One row per seller: state, city, and the funnel channel a
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `seller_id` | string | Seller id. On `fact_orders`, empty when several sellers shipped the order. |
+| `seller_id` | string | Primary key. Seller id. On `fact_orders`, empty when several sellers shipped the order. |
 | `seller_state` | string | Seller state. On `fact_orders`, empty when several sellers shipped the order. |
 | `seller_city` | string | Seller city. |
 | `came_through_funnel` | boolean | The seller signed through the marketing funnel. |
@@ -127,7 +127,7 @@ Table. Gold dimension. One row per product, with its category in English (Portug
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `product_id` | string | Product id. |
+| `product_id` | string | Primary key. Product id. |
 | `category` | string | Product category in English (Portuguese when no translation, `unknown` when blank). On `fact_orders`, the first item's category. |
 | `category_pt` | string | Product category in Portuguese. |
 | `product_weight_g` | int | Weight, grams. |
@@ -140,7 +140,7 @@ Table. Gold. One row per purchase month, Jan 2017 to Aug 2018: judged orders, br
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `month_start` | date | First day of the month. |
+| `month_start` | date | Primary key. First day of the month. |
 | `judged_orders` | bigint | Judged orders. |
 | `broken_orders` | bigint | Broken promises. |
 | `broken_rate` | double | Broken promises / judged orders. |
@@ -153,9 +153,9 @@ Table. Gold. One row per route (seller state > customer state, single-seller ord
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `route` | string | Seller state > customer state, single-seller orders only. |
-| `seller_state` | string | Seller state. On `fact_orders`, empty when several sellers shipped the order. |
-| `customer_state` | string | Customer state. |
+| `route` | string | Primary key. Seller state > customer state, single-seller orders only. |
+| `seller_state` | string | Foreign key to `dim_state`. Seller state. On `fact_orders`, empty when several sellers shipped the order. |
+| `customer_state` | string | Foreign key to `dim_state`. Customer state. |
 | `orders` | bigint | Judged single-seller orders on the route. |
 | `broken_orders` | bigint | Broken promises on the route. |
 | `orders_busy` | bigint | Of those, bought in busy months. |
@@ -185,7 +185,7 @@ Table. Gold. One row per state: 12-month orders per 100,000 residents, active se
 
 | Column | Type | Meaning |
 | --- | --- | --- |
-| `state` | string | State, two letters (SP, RJ, ...). |
+| `state` | string | Primary key; foreign key to `dim_state`. State, two letters (SP, RJ, ...). |
 | `state_name` | string | State name (IBGE spelling). |
 | `region` | string | IBGE region in English: North, Northeast, Southeast, South, Center-West. |
 | `area` | string | Region with the Southeast split into Rio de Janeiro and the rest. |
@@ -245,6 +245,7 @@ Metric view. Olist delivery-promise metrics. Grain of the source: one row per or
 | `avg_score_late_before_arrival` | double | Average score of late orders reviewed before arrival |
 | `avg_score_late_after_arrival` | double | Average score of late orders reviewed after arrival |
 | `share_late_handed_over_by_deadline` | double | Of delivered broken promises from one seller, the share handed to the carrier by the seller's deadline (carrier time at or before the deadline time) |
+| `share_kept_handed_over_by_deadline` | double | The same share for kept promises from one seller, the comparison for share_late_handed_over_by_deadline (a kept promise was always delivered) |
 | `avg_days_to_carrier` | double | Average days from purchase to the carrier, judged orders that arrived and whose two gaps are both measured, so it stacks with avg_days_carrier_to_customer |
 | `avg_days_carrier_to_customer` | double | Average days from the carrier to the customer, on the same orders as avg_days_to_carrier |
 | `median_delivery_days` | double | Median days from purchase to delivery, judged orders |
@@ -288,6 +289,7 @@ View. Dashboard 3. One row per state: orders per 100,000 residents, broken rate,
 | `pct_of_orders` | double | Percent of all orders, 12 months. |
 | `pct_of_sellers` | double | Percent of all sellers. |
 | `pct_of_funnel_recruits` | double | Percent of funnel sellers who sold. |
+| `highlight` | string | Rio de Janeiro or Other states: the label Dashboard 3's scatter colors by. |
 
 ### region_fairness
 

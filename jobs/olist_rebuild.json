@@ -1,0 +1,63 @@
+{
+  "name": "Olist rebuild: Silver to dashboards",
+  "description": "MGTA 457 Olist project. Runs sql/03_silver.sql to sql/07_dashboard_views.sql in order, then refreshes the three published dashboards. 06_checks.sql ends with a gate that fails when any pipeline check is not PASS, so the dashboard views and the refresh never run on a build that failed a check. Run by hand: the data is a fixed extract, so there is no schedule. Deployed by tools/deploy_job.py.",
+  "max_concurrent_runs": 1,
+  "tags": {"project": "mgta457-olist"},
+  "tasks": [
+    {
+      "task_key": "silver",
+      "description": "03_silver.sql: types and cleans the raw tables, sets rows aside in the quarantine.",
+      "sql_task": {"file": {"path": "${FOLDER}/03_silver.sql", "source": "WORKSPACE"}, "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "gold",
+      "description": "04_gold.sql: the star schema, the busy months, routes and states, and the declared keys.",
+      "depends_on": [{"task_key": "silver"}],
+      "sql_task": {"file": {"path": "${FOLDER}/04_gold.sql", "source": "WORKSPACE"}, "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "metric_view",
+      "description": "05_metric_view.sql: delivery_metrics, every rate a dashboard filter recalculates.",
+      "depends_on": [{"task_key": "gold"}],
+      "sql_task": {"file": {"path": "${FOLDER}/05_metric_view.sql", "source": "WORKSPACE"}, "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "checks_and_gate",
+      "description": "06_checks.sql: the 24 pipeline checks, the rule counts and the design-document numbers; fails unless every check is PASS.",
+      "depends_on": [{"task_key": "metric_view"}],
+      "sql_task": {"file": {"path": "${FOLDER}/06_checks.sql", "source": "WORKSPACE"}, "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "dashboard_views",
+      "description": "07_dashboard_views.sql: the small views the dashboards read besides the metric view.",
+      "depends_on": [{"task_key": "checks_and_gate"}],
+      "sql_task": {"file": {"path": "${FOLDER}/07_dashboard_views.sql", "source": "WORKSPACE"}, "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 3600
+    },
+    {
+      "task_key": "refresh_dashboard_1",
+      "description": "Refresh Olist 1 - What broken promises cost.",
+      "depends_on": [{"task_key": "dashboard_views"}],
+      "dashboard_task": {"dashboard_id": "${DASHBOARD_1}", "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 1800
+    },
+    {
+      "task_key": "refresh_dashboard_2",
+      "description": "Refresh Olist 2 - Where promises break.",
+      "depends_on": [{"task_key": "dashboard_views"}],
+      "dashboard_task": {"dashboard_id": "${DASHBOARD_2}", "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 1800
+    },
+    {
+      "task_key": "refresh_dashboard_3",
+      "description": "Refresh Olist 3 - Where local sellers would help.",
+      "depends_on": [{"task_key": "dashboard_views"}],
+      "dashboard_task": {"dashboard_id": "${DASHBOARD_3}", "warehouse_id": "${WAREHOUSE}"},
+      "timeout_seconds": 1800
+    }
+  ]
+}

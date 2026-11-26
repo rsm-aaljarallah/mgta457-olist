@@ -26,7 +26,11 @@ Each chart shows one relationship, in a familiar chart type.
 | 3 | Local vs Sao Paulo sellers, rate and days | Magnitude | Bar |
 | 3 | Shares of orders, sellers and funnel recruits by state | Magnitude and ranking | Clustered bar, sorted |
 
-One chart takes the exception ONS allows. "Where the days go" stacks purchase-to-carrier under carrier-to-customer because the total delivery time matters. Its top segments do not share a baseline, so the 72.2% card next to it carries the comparison.
+One chart takes the exception ONS allows. "Where the days go" stacks purchase-to-carrier under carrier-to-customer because the total delivery time matters. Its top segments do not share a baseline, so the two cards next to it carry the comparison: 72.2% of late deliveries were handed to the carrier on time, against 92.3% of on-time ones.
+
+Colour is used the same way on every page. In the charts, gray is context; red marks broken promises where a chart sets them against kept ones, or against a later promise; and blue marks the series a chart's note talks about (amber a second one, on the one chart that has two). The tables have their own colour keys, for the fix type and the check results. The saved ONS page does not cover colour, so this rule is ours.
+
+We also followed Stephen Few, "Why Most Dashboards Fail" (Perceptual Edge, 2007; not copied here). Every headline card sits next to its comparison, the question Few asks of every number: compared to what? And colour is kept for what needs attention. His one-screen rule we meet only in part. A Lakeview grid row is about 60 pixels high whatever the screen width, so on a 1080p screen each page opens with its title, its filters where it has any, and its main exhibit (the headline cards, the routes table, the checks, or the state scatter), while the detail below needs a scroll. Fitting it all would mean cutting charts.
 
 ## Our Gold layer, checked against Kimball
 
@@ -37,9 +41,9 @@ The star schema follows the article:
 - **Additive facts.** Counts and money are stored, and the metric view computes every rate from sums, as Kimball computes a unit price from total sales and total units.
 - **Flat dimensions.** Region and population sit in `dim_state`, and the funnel channel in `dim_seller`, with no snowflaking.
 - **Degenerate dimension.** `order_id` on `fact_order_items` ties the items of one order together.
-- **Referential integrity.** Every fact key finds its dimension row. On 2026-11-24, 0 item lines had an unknown seller, product or purchase day, and 0 orders had an unknown seller. Check 14 runs this test on every build for the customer state and the purchase day only.
+- **Keys and referential integrity.** The keys are declared in Unity Catalog (`04_gold.sql`, section 10): 9 primary keys and 15 foreign keys, so Catalog Explorer draws the star schema itself (`docs/img/star_schema.png`). Unity Catalog does not enforce declared keys, so our checks test them on every build: check 14 that every foreign key finds its row and that all 24 keys are declared, and checks 10, 12 and 14 that no primary key repeats.
 
 It departs in two places, on purpose:
 
 - **Natural keys, not surrogate keys.** We keep Olist's ids, the state codes and the dates as keys. The data is a fixed extract with no history to track, so surrogate integers would add joins without benefit. A monthly refresh in which sellers change would need surrogate keys and slowly changing dimensions.
-- **An empty seller key instead of a "no single seller" row.** 2,053 orders have no single seller: 1,278 shipped by several sellers and 775 with no item. Kimball would point them at a special dimension row; we leave the key empty, and the metric view labels them "Several sellers or no item".
+- **An empty seller key instead of a "no single seller" row.** 2,053 orders have no single seller: 1,278 shipped by several sellers and 775 with no item. Kimball would point them at a special dimension row; we leave the key empty, which a declared foreign key allows, and the metric view labels them "Several sellers or no item". A special row would also have to be kept out of every count of sellers.

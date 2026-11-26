@@ -7,7 +7,8 @@
 // Speaker notes come from tools/deck/script.json, the same text as docs/presentation_outline.md.
 // Screenshots come from docs/img (taken from the published dashboards on 2026-11-24).
 // AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's deck script
-// (see docs/ai_usage.md).
+// (see docs/ai_usage.md). Revised with Claude, 2026-11-24: slide 10 (declared keys and the
+// rebuild job) and the comparisons on slides 5 and 7.
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
@@ -144,6 +145,7 @@ s = content(5, "What we found");
 shot(s, "dash_1_cost.png", 0.6, 1.35, 8.2, 5.5, "Dashboard 1 screenshot");
 points(s, [
   "8.6% of judged orders, but 36.7% of in-window orders with a 1-2 star review, canceled ones included",
+  "Average review: 4.29 when the promise held, 2.18 when it broke",
   "The score holds while parcels arrive early, then drops right after the promised day: 4.03 on the day, 2.10 at 4-7 days late",
   "In the same delivery week, late orders score 0.4 to 1.8 stars lower",
   "70.1% of late parcels with a review were reviewed before arrival: 1.65 stars, against 3.72 after",
@@ -163,7 +165,7 @@ points(s, [
   "Busy months (Nov 2017, Feb and Mar 2018): 22.1% of orders, 42.9% of broken promises → busy-season plan",
   "The Northeast breaks promises in ordinary months too → lasting fix",
   "A promise 3 days later: 8.6% → only 6.6%",
-  "72.2% of late parcels from one seller reached the carrier on time: most of the delay is after the handover",
+  "72.2% of late parcels from one seller reached the carrier on time (92.3% of on-time ones): most of the delay is after the handover",
 ], 9.1, 1.5, 3.7, 5.2, 15);
 
 // ---------------------------------------------------------------- 8 local sellers
@@ -185,9 +187,20 @@ stat(s, 8.6, 1.5, 4.1, "24 / 24", "pipeline checks pass", "Checks", "00A972");
 stat(s, 8.6, 3.2, 4.1, "3 rows", "of 415,201 order, item, payment and review rows set aside (0.001%)", "Quarantine");
 stat(s, 8.6, 4.9, 4.1, "56 / 56", "design-document results recomputed from Gold match", "Doc numbers", "00A972");
 
-// ---------------------------------------------------------------- 10 recommendations
+// ---------------------------------------------------------------- 10 keys and the rebuild job
+s = content(10, "Can we trust it");
+shot(s, "star_schema.png", 0.6, 1.35, 4.3, 5.45, "Star schema drawn by Catalog Explorer from the declared keys");
+shot(s, "job_run.png", 5.3, 1.35, 7.4, 2.2, "A run of the rebuild job, every task succeeded");
+points(s, [
+  "9 primary and 15 foreign keys declared in Unity Catalog, so Databricks draws the star schema itself",
+  "Unity Catalog does not enforce declared keys, so our checks test them on every build",
+  "One job runs Silver, Gold, the metric view, the checks and the dashboard views, then refreshes the three dashboards",
+  "The checks end in a gate: if any of the 24 fails, the job stops before the dashboard views and the refresh",
+], 5.3, 3.5, 7.4, 3.2, 16);
+
+// ---------------------------------------------------------------- 11 recommendations
 pres.addSection({ title: "What to do" });
-s = content(10, "What to do");
+s = content(11, "What to do");
 [
   ["Customer Experience", "Test a delay notice", "Send a new date before the review survey to customers whose parcel will miss. Measure the score against a control group."],
   ["Logistics", "Fix Sao Paulo to Rio first", "Review its carrier and transit days, and book extra capacity before busy months. Then the Northeast routes with a lasting-fix label."],
@@ -202,10 +215,10 @@ s = content(10, "What to do");
 s.addText("How we will know: the score of late orders (Dashboard 1), the rate on each fixed route (Dashboard 2), and the local share of Rio's orders (Dashboard 3). The same pipeline reruns on new months.",
   { x: 0.6, y: 5.45, w: 12.1, h: 0.9, fontSize: 16, italic: true, color: C.text2, margin: 0, valign: "top", isTextBox: true, objectName: "How we will know" });
 
-// ---------------------------------------------------------------- 11 limits and close
+// ---------------------------------------------------------------- 12 limits and close
 s = pres.addSlide({ masterName: "DARK", sectionTitle: "What to do" });
-s.addText(SCRIPT[10].title, { placeholder: "title" });
+s.addText(SCRIPT[11].title, { placeholder: "title" });
 s.addText("Promise and review links are correlations  ·  no carrier or tracking data  ·  busy months found in the same data  ·  deliveries recorded only to August 2018\n\nQuestions?", { placeholder: "body" });
-s.addNotes(say(11));
+s.addNotes(say(12));
 
 pres.writeFile({ fileName: OUT }).then(() => (applyTheme ? applyTheme(OUT, THEME) : null)).then(() => console.log("wrote", OUT));

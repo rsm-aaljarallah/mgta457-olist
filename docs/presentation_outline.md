@@ -1,6 +1,6 @@
 # Presentation outline
 
-The talk for `deliverables/olist_presentation.pptx`: 11 slides, about 13.5 minutes, within the 10 to 15 the syllabus asks. The same text is in each slide's speaker notes; both come from `tools/deck/script.json`. The speaker split is a suggestion.
+The talk for `deliverables/olist_presentation.pptx`: 12 slides, about 14.25 minutes, within the 10 to 15 the syllabus asks. The same text is in each slide's speaker notes; both come from `tools/deck/script.json`. The speaker split is a suggestion.
 
 | Slide | Title | Speaker | Minutes |
 | ---: | --- | --- | ---: |
@@ -13,10 +13,11 @@ The talk for `deliverables/olist_presentation.pptx`: 11 slides, about 13.5 minut
 | 7 | Two kinds of fix, and a promise 3 days later is not one | AJ | 1.5 |
 | 8 | Rio: high demand, few sellers per resident | Merna | 1.5 |
 | 9 | Can we trust it? Every check is on the dashboard | Ruby | 1.25 |
-| 10 | What Olist should do next | AJ | 1.0 |
-| 11 | What the data cannot tell us | Merna | 0.75 |
+| 10 | Declared keys, and a rebuild that stops on a failed check | Ruby | 0.75 |
+| 11 | What Olist should do next | AJ | 1.0 |
+| 12 | What the data cannot tell us | Merna | 0.75 |
 
-Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
+Total: 14.25 minutes. AJ 5.75, Ruby 4.75, Merna 3.75.
 
 ## 1. Where Olist breaks its delivery promise, and what to fix first
 
@@ -36,7 +37,7 @@ Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
 
 ## 5. Broken promises draw a third of the bad reviews
 
-**Merna, 1.5 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of the orders we judge broke their promise, but they make up 36.7 percent of the orders in our window with a one or two star review, canceled ones included. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders delivered in the same week: the late ones score lower in every band, so customers react to the broken promise, not only to speed. And 70 percent of the late parcels with a review were reviewed before they arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
+**Merna, 1.5 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of the orders we judge broke their promise, but they make up 36.7 percent of the orders in our window with a one or two star review, canceled ones included. On average a kept promise earns 4.29 stars and a broken one 2.18. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders delivered in the same week: the late ones score lower in every band, so customers react to the broken promise, not only to speed. And 70 percent of the late parcels with a review were reviewed before they arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
 
 ## 6. One route breaks more promises than the next nine together
 
@@ -44,7 +45,7 @@ Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
 
 ## 7. Two kinds of fix, and a promise 3 days later is not one
 
-**AJ, 1.5 min.** Three months were different: November 2017, February and March 2018. They hold 22 percent of orders but 43 percent of broken promises, so some routes need a busy-season plan. But the Northeast breaks promises in ordinary months too, so some routes need a lasting fix. Sao Paulo to Rio needs both. The obvious idea, promising three days later, only takes the rate from 8.6 to 6.6 percent. And 72 percent of the late parcels from one seller reached the carrier by the seller's deadline, so most of the delay happens after the handover.
+**AJ, 1.5 min.** Three months were different: November 2017, February and March 2018. They hold 22 percent of orders but 43 percent of broken promises, so some routes need a busy-season plan. But the Northeast breaks promises in ordinary months too, so some routes need a lasting fix. Sao Paulo to Rio needs both. The obvious idea, promising three days later, only takes the rate from 8.6 to 6.6 percent. And 72 percent of the late parcels from one seller reached the carrier by the seller's deadline, against 92 percent of the on-time ones, so most of the delay happens after the handover.
 
 ## 8. Rio: high demand, few sellers per resident
 
@@ -54,10 +55,14 @@ Total: 13.5 minutes. AJ 5.75, Ruby 4.0, Merna 3.75.
 
 **Ruby, 1.25 min.** Dashboard 2 has a second page, Can we trust it. Twenty-four pipeline checks run on every build: every order, item, payment and review row lands in Silver or in quarantine, every key holds, no join inflates money, the stored rates agree with the metric view, and the days are the days written in the files. All pass. Only 3 of 415 thousand order, item, payment and review rows were set aside. A view recomputes all 56 results printed in our design document from Gold, and all match. The same page shows the fairness check: Northeast customers get worse service, 15.6 against 7.8 percent, and we show that gap with its margin instead of hiding it.
 
-## 10. What Olist should do next
+## 10. Declared keys, and a rebuild that stops on a failed check
+
+**Ruby, 0.75 min.** Two things make this a pipeline Olist could run every month. First, the star schema is declared, not just described: Unity Catalog holds nine primary keys and fifteen foreign keys, and Databricks draws this diagram from them. It does not enforce them, so our checks test on every build that every foreign key finds its row. Second, one Databricks job runs the whole rebuild, from Silver to the dashboard views, and then refreshes the three dashboards. The checks end in a gate: if any of the 24 fails, the job stops before the dashboard views and the refresh, so the published dashboards keep their last good results until someone refreshes them by hand.
+
+## 11. What Olist should do next
 
 **AJ, 1.0 min.** Three actions, one per reader. Customer Experience: test a delay notice with a new date, sent before the review survey to customers whose parcel will miss. Logistics: review the carrier and transit days on Sao Paulo to Rio first, and book extra capacity before the busy months. Seller Acquisition: run a measured recruiting pilot in Rio, and check whether local sellers really deliver faster for the same products.
 
-## 11. What the data cannot tell us
+## 12. What the data cannot tell us
 
 **Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And deliveries stop being recorded after August 2018, so we deliver a pipeline a monthly refresh would rerun, not a list for today. Thank you; we are happy to take questions.

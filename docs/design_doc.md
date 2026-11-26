@@ -69,7 +69,7 @@ This page is for the Head of Seller Acquisition. The scatter plot (1) puts each 
 
 ## Why these charts
 
-We kept to five chart types and gave each one job. A card shows a single headline number. Bars compare groups: score by days late, regions, local and distant sellers. A line shows rates moving over months. The scatter puts two measures of the same state against each other. A table carries the ranked routes, because a logistics lead needs names and reasons, not shapes. Besides telling series apart, colour marks only the fix type and the check results, and the routes and regions tables show margins of error next to the rates. The built dashboards hold 19 visuals (16 in these sketches), against the syllabus minimum of three dashboards and six visuals. The figures are layout sketches drawn from our dashboard plan, and their numbers match the text.
+We kept to five chart types and gave each one job. A card shows a single headline number. Bars compare groups: score by days late, regions, local and distant sellers. A line shows rates moving over months. The scatter puts two measures of the same state against each other. A table carries the ranked routes, because a logistics lead needs names and reasons, not shapes. Gray is context, red sets broken promises against kept or later ones, blue marks what a chart's note discusses, and each headline card sits next to its comparison. The built dashboards hold 24 visuals (16 in these sketches), against the syllabus minimum of three dashboards and six visuals. The figures are layout sketches drawn from our dashboard plan, and their numbers match the text.
 
 ## User flow and filters
 

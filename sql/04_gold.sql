@@ -11,6 +11,7 @@
 --             gold_months   which months are busy months
 --             gold_routes   ranked routes with their fix type
 --             gold_states   population-based measures by state
+--           Section 10 declares the primary and foreign keys.
 -- Run:      After 03_silver.sql. Rebuilds every Gold table. Safe to
 --           rerun. Then 05_metric_view.sql and 06_checks.sql.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24. Every
@@ -18,7 +19,8 @@
 --           docs/design_doc.md before it was written here.
 --           Revised with Claude, 2026-11-24, after an audit: routes under
 --           100 orders get no fix type, the flags can never be
---           empty (see docs/ai_usage.md).
+--           empty (see docs/ai_usage.md). Revised with Claude,
+--           2026-11-24: the keys of section 10 declared.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -506,3 +508,62 @@ LEFT JOIN active        AS a  ON a.state  = st.state
 LEFT JOIN window_orders AS w  ON w.state  = st.state
 LEFT JOIN all_sellers   AS s  ON s.state  = st.state
 LEFT JOIN funnel        AS fu ON fu.state = st.state;
+
+-- ------------------------------------------------------------
+-- 10. Keys: the star schema, declared in Unity Catalog, so that
+--     Catalog Explorer draws it and any tool can read the joins.
+--     The keys are informational: Unity Catalog does not enforce a
+--     primary key's uniqueness or a foreign key's match, so check 14
+--     of 06_checks.sql tests both on every build. They are declared
+--     without RELY, so no query result ever depends on them.
+--     CREATE OR REPLACE drops a table's keys and every foreign key
+--     that points at it, so they are declared here, at the end,
+--     after every table above has been rebuilt. A primary key column
+--     has to be NOT NULL first.
+-- ------------------------------------------------------------
+ALTER TABLE olist.analytics.dim_state ALTER COLUMN state SET NOT NULL;
+ALTER TABLE olist.analytics.dim_state ADD CONSTRAINT dim_state_pk PRIMARY KEY (state);
+ALTER TABLE olist.analytics.dim_seller ALTER COLUMN seller_id SET NOT NULL;
+ALTER TABLE olist.analytics.dim_seller ADD CONSTRAINT dim_seller_pk PRIMARY KEY (seller_id);
+ALTER TABLE olist.analytics.dim_product ALTER COLUMN product_id SET NOT NULL;
+ALTER TABLE olist.analytics.dim_product ADD CONSTRAINT dim_product_pk PRIMARY KEY (product_id);
+ALTER TABLE olist.analytics.dim_date ALTER COLUMN date_key SET NOT NULL;
+ALTER TABLE olist.analytics.dim_date ADD CONSTRAINT dim_date_pk PRIMARY KEY (date_key);
+ALTER TABLE olist.analytics.fact_orders ALTER COLUMN order_id SET NOT NULL;
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_pk PRIMARY KEY (order_id);
+ALTER TABLE olist.analytics.fact_order_items ALTER COLUMN order_id SET NOT NULL;
+ALTER TABLE olist.analytics.fact_order_items ALTER COLUMN order_item_id SET NOT NULL;
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_pk PRIMARY KEY (order_id, order_item_id);
+ALTER TABLE olist.analytics.gold_months ALTER COLUMN month_start SET NOT NULL;
+ALTER TABLE olist.analytics.gold_months ADD CONSTRAINT gold_months_pk PRIMARY KEY (month_start);
+ALTER TABLE olist.analytics.gold_routes ALTER COLUMN route SET NOT NULL;
+ALTER TABLE olist.analytics.gold_routes ADD CONSTRAINT gold_routes_pk PRIMARY KEY (route);
+ALTER TABLE olist.analytics.gold_states ALTER COLUMN state SET NOT NULL;
+ALTER TABLE olist.analytics.gold_states ADD CONSTRAINT gold_states_pk PRIMARY KEY (state);
+
+-- Foreign keys: 6 from each fact table, 3 from the rule tables. The
+-- three dates of an order all point to dim_date. An order with no
+-- single seller has an empty seller key (rule 13), which a foreign key
+-- allows. order_id on fact_order_items stays a degenerate dimension:
+-- its key points to fact_orders, the order the item belongs to.
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_customer_state_fk FOREIGN KEY (customer_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_seller_state_fk FOREIGN KEY (seller_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_seller_fk FOREIGN KEY (seller_id) REFERENCES olist.analytics.dim_seller (seller_id);
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_purchase_date_fk FOREIGN KEY (purchase_date) REFERENCES olist.analytics.dim_date (date_key);
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_promised_date_fk FOREIGN KEY (promised_date) REFERENCES olist.analytics.dim_date (date_key);
+ALTER TABLE olist.analytics.fact_orders ADD CONSTRAINT fact_orders_delivered_date_fk FOREIGN KEY (delivered_date) REFERENCES olist.analytics.dim_date (date_key);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_order_fk FOREIGN KEY (order_id) REFERENCES olist.analytics.fact_orders (order_id);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_product_fk FOREIGN KEY (product_id) REFERENCES olist.analytics.dim_product (product_id);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_seller_fk FOREIGN KEY (seller_id) REFERENCES olist.analytics.dim_seller (seller_id);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_seller_state_fk FOREIGN KEY (seller_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_customer_state_fk FOREIGN KEY (customer_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.fact_order_items ADD CONSTRAINT fact_order_items_purchase_date_fk FOREIGN KEY (purchase_date) REFERENCES olist.analytics.dim_date (date_key);
+ALTER TABLE olist.analytics.gold_routes ADD CONSTRAINT gold_routes_seller_state_fk FOREIGN KEY (seller_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.gold_routes ADD CONSTRAINT gold_routes_customer_state_fk FOREIGN KEY (customer_state) REFERENCES olist.analytics.dim_state (state);
+ALTER TABLE olist.analytics.gold_states ADD CONSTRAINT gold_states_state_fk FOREIGN KEY (state) REFERENCES olist.analytics.dim_state (state);
+
+SELECT table_name, constraint_type, COUNT(*) AS declared
+FROM olist.information_schema.table_constraints
+WHERE table_schema = 'analytics'
+GROUP BY table_name, constraint_type
+ORDER BY table_name, constraint_type;
