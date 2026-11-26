@@ -35,6 +35,10 @@ Every rate that a dashboard filter must recalculate is a measure in the metric v
 | Reviewed before arrival | Of delivered broken promises with a review, the share answered before the parcel arrived, comparing the two timestamps | measure `share_late_reviewed_before_arrival` | 70.1% |
 | Score before and after arrival | Average score of late orders reviewed before / after arrival | measures `avg_score_late_before_arrival`, `avg_score_late_after_arrival` | 1.65 / 3.72 |
 | Score, kept and broken | Average score of judged orders that kept / broke their promise | measures `avg_score_kept`, `avg_score_broken` | 4.29 / 2.18 |
+| Low reviews with text | Judged orders whose latest review gives 1 or 2 stars and has a title or comment | measure `low_reviews_with_text` | 10,035 |
+| Says late or missing, kept and broken | Of those, the share whose title or comment says the parcel was late, slow or missing, by the word list below; kept / broken promises | measures `share_low_reviews_late_or_missing_kept`, `share_low_reviews_late_or_missing_broken` (and `share_low_reviews_late_or_missing` for any grouping) | 19.1% / 66.4% |
+
+**The word list.** The reviews are in Portuguese. `fact_orders.review_says_late_or_missing` is true when the latest review's title or comment, in lower case, contains: *atras* (atraso, atrasado: late), *demor* (demora, demorou: slow), *não* followed by *receb*, *cheg* or *entreg*, with at most one short word between (não recebi, não chegou, não foi entregue), *nunca chegou* or *nunca recebi*, *extravi* (extraviado: lost in transit), or a passed deadline (*fora do prazo*, *passou do prazo*, *prazo venceu* and similar). *Prazo* alone is left out, because *dentro do prazo* means on time; we also dropped *aguardando*, *esperando* and *até agora* after reading samples of their matches, because many were about something else, such as a refund, an exchange or an installation. We then read two fresh random samples (`08_robustness.sql`, query 3). Of 100 flagged reviews, 95 complain of a late, slow or missing parcel (70 of 72 on broken promises, 25 of 28 on kept ones). Of 30 unflagged reviews of broken promises, 18 are delivery complaints in other words, so the share for broken promises is a floor. A kept promise can still draw such a review when part of an order never came, or the delivery felt slow although it met the date.
 
 ## Route and month rules
 
@@ -85,7 +89,7 @@ Region and state say where the problem is; they never rank a seller. Northeast c
 
 ## Known weaknesses
 
-- Every link between promises and reviews is a correlation.
+- Every link between promises and reviews is a correlation. The review text makes it more direct, but the word list reads words, not meaning: 5 of the 100 flagged reviews we read were about something else, and it misses complaints worded otherwise.
 - We found the busy-month rule by looking at the same data, so it must be judged again on new months; November 2017 passes it by only 15 broken promises.
 - The busy-season test has no margin of error, and 152 routes are tested at once, so some labels on smaller routes may be chance. The 100-order floor limits this.
 - The last days of August hold mostly orders that had already arrived, so the end of the window looks better than it was (see the sensitivity table).

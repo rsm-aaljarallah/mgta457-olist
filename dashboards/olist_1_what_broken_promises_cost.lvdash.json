@@ -683,6 +683,120 @@
         },
         {
           "widget": {
+            "name": "c_words",
+            "multilineTextboxSpec": {
+              "lines": [
+                "**What the 1-2 star reviews say.** A review counts when its title or comment, in Portuguese, says the parcel was late, slow or missing: *atraso*, *demora*, *n\u00e3o recebi*, *n\u00e3o chegou*, *n\u00e3o foi entregue*, *nunca chegou*, *extraviado*, *fora do prazo*. We read 100 reviews the list flags, drawn at random: 95 were real delivery complaints. The list also misses complaints worded otherwise (18 of 30 unflagged broken promises we read), so the share for broken promises is a floor. Base: judged orders whose latest review gives 1 or 2 stars and has text."
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_words_kept",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_low_reviews_late_or_missing_kept)",
+                      "expression": "MEASURE(`share_low_reviews_late_or_missing_kept`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_low_reviews_late_or_missing_kept)",
+                  "displayName": "Promise kept",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Promise kept",
+                "showDescription": true,
+                "description": "Say late or missing"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 14,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "c_words_broken",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "metrics",
+                  "fields": [
+                    {
+                      "name": "measure(share_low_reviews_late_or_missing_broken)",
+                      "expression": "MEASURE(`share_low_reviews_late_or_missing_broken`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(share_low_reviews_late_or_missing_broken)",
+                  "displayName": "Promise broken",
+                  "format": {
+                    "type": "number-percent",
+                    "decimalPlaces": {
+                      "type": "max",
+                      "places": 1
+                    }
+                  }
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Promise broken",
+                "showDescription": true,
+                "description": "Say late or missing"
+              }
+            }
+          },
+          "position": {
+            "x": 5,
+            "y": 14,
+            "width": 1,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
             "name": "c_note",
             "multilineTextboxSpec": {
               "lines": [
@@ -692,7 +806,7 @@
           },
           "position": {
             "x": 0,
-            "y": 14,
+            "y": 16,
             "width": 6,
             "height": 2
           }

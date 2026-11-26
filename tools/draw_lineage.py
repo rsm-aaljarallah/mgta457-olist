@@ -4,6 +4,7 @@ Run from the repo root:  python3 tools/draw_lineage.py
 Row counts are those of the build of 2026-11-24; update them here if the data changes.
 
 AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's script (see docs/ai_usage.md).
+Revised with Claude, 2026-11-26: the Genie space and the alert.
 """
 import os
 from PIL import Image, ImageDraw, ImageFont
@@ -61,9 +62,11 @@ COLS = [
                                                ("region_fairness", "dashboard view (07)"),
                                                ("deliveries_per_month", "dashboard view (07)"),
                                                ("quarantine_summary", "dashboard view (07)")]),
-    ("Dashboards", "#0B1F2A", [("1 What broken promises cost", "Customer Experience"),
-                               ("2 Where promises break", "Logistics, + trust page"),
-                               ("3 Where local sellers help", "Seller Acquisition")]),
+    ("Dashboards, Genie, alert", "#0B1F2A", [("1 What broken promises cost", "Customer Experience"),
+                                             ("2 Where promises break", "Logistics, + trust page"),
+                                             ("3 Where local sellers help", "Seller Acquisition"),
+                                             ("Ask Olist (Genie)", "questions in plain English"),
+                                             ("Alert: SP > RJ", "Mondays, at 2x the national rate")]),
 ]
 BW, BH, TOP, GAPX = 380, 84, 120, 432
 pos = {}

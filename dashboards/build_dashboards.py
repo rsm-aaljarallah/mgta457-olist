@@ -6,8 +6,9 @@ teammate import the same dashboards into their own Databricks account
 (Dashboards > arrow next to Create dashboard > Import dashboard from file).
 The layout started from docs/dashboard_plan.json, the plan in the design
 document; the build adds one card, splits two charts and shows the fairness
-check as a table, and five more cards put a comparison next to each headline
-number (24 visuals, against 16 sketched).
+check as a table, five more cards put a comparison next to each headline
+number, and two cards say what the 1-2 star reviews complain about (26
+visuals, against 16 sketched).
 
 The dashboards contain no business logic. Every widget either shows a column
 of a Gold table or view as it is, or asks the metric view
@@ -17,6 +18,7 @@ Run:  python3 dashboards/build_dashboards.py   then   python3 tools/deploy_dashb
 AI use: drafted with Claude (Anthropic), 2026-11-24, adapted from the
 dashboard script of the Chord project (see docs/ai_usage.md). Revised with
 Claude, 2026-11-24: one colour rule on every page and the comparison cards.
+Revised with Claude, 2026-11-26: the two cards on what the reviews say.
 """
 import json
 import os
@@ -264,11 +266,24 @@ cost = dashboard(["metrics"], [("What broken promises cost", [
                 "Average review score", TWO, series_colors=[GRAY, RED],
                 description="With no filter, late orders score lower in every band of the same delivery time, "
                             "so the score follows the promise, not only the speed."), 3, 6, 3, 7),
+    # What the customers write: the same 1-2 star reviews, read for words that say the parcel was
+    # late, slow or missing. The word list is in 04_gold.sql, its hand check in 08_robustness.sql.
+    place(text("c_words", "**What the 1-2 star reviews say.** A review counts when its title or comment, in "
+               "Portuguese, says the parcel was late, slow or missing: *atraso*, *demora*, *não recebi*, "
+               "*não chegou*, *não foi entregue*, *nunca chegou*, *extraviado*, *fora do prazo*. We read 100 "
+               "reviews the list flags, drawn at random: 95 were real delivery complaints. The list also misses "
+               "complaints worded otherwise (18 of 30 unflagged broken promises we read), so the share for broken "
+               "promises is a floor. Base: judged orders whose latest review gives 1 or 2 stars and has text."),
+          0, 13, 4, 2),
+    place(counter("c_words_kept", "Promise kept", "share_low_reviews_late_or_missing_kept", PCT,
+                  "Say late or missing"), 4, 13, 1, 2),
+    place(counter("c_words_broken", "Promise broken", "share_low_reviews_late_or_missing_broken", PCT,
+                  "Say late or missing"), 5, 13, 1, 2),
     place(text("c_note", "**Read with care.** Every link between promises and reviews is a correlation. "
                "The cheap test it points to: a delay notice with a new date, sent before the review survey to "
                "customers whose parcel will miss. Judged orders: bought from January 2017 and promised by "
                "August 31, 2018, not canceled or unavailable, and not one of 8 marked delivered with no delivery date; an order that never arrived counts as broken. Each "
-               "order counts its latest review once. Source: `olist.analytics.delivery_metrics`."), 0, 13, 6, 2),
+               "order counts its latest review once. Source: `olist.analytics.delivery_metrics`."), 0, 15, 6, 2),
 ])])
 
 # ---------------------------------------------------------------- dashboard 2

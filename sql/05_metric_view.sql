@@ -17,6 +17,8 @@
 --           measures use the same orders; label and comment fixes.
 --           Revised with Claude, 2026-11-24: share_kept_handed_over_by_
 --           deadline added, the comparison on Dashboard 2.
+--           Revised with Claude, 2026-11-26: four measures on what
+--           1-2 star reviews say, for Dashboard 1 and the Genie space.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -37,6 +39,8 @@
 -- The low-review measures count every order in the window, canceled
 -- ones too, because a bad review of a canceled order is still part
 -- of the bad-review pile the Head of Customer Experience owns.
+-- The four measures on what the review text says count judged orders
+-- only, because they compare kept promises with broken ones.
 --
 -- Every rate uses TRY_DIVIDE, which gives an empty value instead of an
 -- error when a filter leaves no order to divide by (for example 2016,
@@ -160,6 +164,18 @@ AS $$
     - name: avg_score_broken
       expr: AVG(CASE WHEN source.is_broken = 1 THEN source.review_score END)
       comment: "Average latest review score of broken promises"
+    - name: low_reviews_with_text
+      expr: SUM(CASE WHEN source.is_judged AND source.is_low_review = 1 AND source.has_review_text THEN 1 ELSE 0 END)
+      comment: "Judged orders whose latest review gives 1 or 2 stars and has a title or comment"
+    - name: share_low_reviews_late_or_missing
+      expr: AVG(CASE WHEN source.is_judged AND source.is_low_review = 1 AND source.has_review_text THEN CAST(source.review_says_late_or_missing AS INT) END)
+      comment: "Of those, the share whose title or comment says the parcel was late, slow or missing (Portuguese word list in 04_gold.sql). Group by promise_outcome to compare kept and broken promises"
+    - name: share_low_reviews_late_or_missing_kept
+      expr: AVG(CASE WHEN source.is_judged AND source.is_broken = 0 AND source.is_low_review = 1 AND source.has_review_text THEN CAST(source.review_says_late_or_missing AS INT) END)
+      comment: "The same share for kept promises"
+    - name: share_low_reviews_late_or_missing_broken
+      expr: AVG(CASE WHEN source.is_broken = 1 AND source.is_low_review = 1 AND source.has_review_text THEN CAST(source.review_says_late_or_missing AS INT) END)
+      comment: "The same share for broken promises"
     - name: share_late_reviewed_before_arrival
       expr: AVG(CASE WHEN source.is_broken = 1 THEN CAST(source.reviewed_before_arrival AS INT) END)
       comment: "Of delivered broken promises with a review, the share answered before the parcel arrived (answer time before delivery time)"
@@ -204,6 +220,15 @@ FROM (SELECT MEASURE(judged_orders) AS judged, MEASURE(broken_orders) AS broken,
       FROM olist.analytics.delivery_metrics) AS v
 CROSS JOIN (SELECT SUM(CASE WHEN is_judged THEN 1 ELSE 0 END) AS judged, SUM(is_broken) AS broken
             FROM olist.analytics.fact_orders) AS f;
+
+-- Example: the two cards on Dashboard 1 that compare what 1-2 star
+-- reviews say. Expected with no filter: 0.191 for kept promises
+-- (1,221 of 6,381 reviews with text) and 0.664 for broken ones
+-- (2,426 of 3,654).
+SELECT MEASURE(share_low_reviews_late_or_missing_kept)   AS kept,
+       MEASURE(share_low_reviews_late_or_missing_broken) AS broken,
+       MEASURE(low_reviews_with_text)                    AS reviews_with_text
+FROM olist.analytics.delivery_metrics;
 
 -- Example: the query behind Dashboard 2's line chart.
 SELECT purchase_month, customer_area, MEASURE(broken_rate) AS broken_rate

@@ -10,6 +10,7 @@ Run from the repo root:  python3 tools/build_data_dictionary.py
 
 AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's script
 (see docs/ai_usage.md). Revised with Claude, 2026-11-24: the declared keys are marked.
+Revised with Claude, 2026-11-26: the two review-text columns.
 """
 import os
 import sys
@@ -86,6 +87,10 @@ MEANING = {
     "review_creation_date": "Day the review survey was sent.",
     "review_answer_ts": "When the customer answered the review.",
     "is_latest_for_order": "Rule 18: the one review per order that score measures use.",
+    "has_review_text": "The latest review has a title or a comment.",
+    "review_says_late_or_missing": "The latest review's title or comment says the parcel was late, slow or missing, by a "
+                                   "Portuguese word list (`04_gold.sql`); 95 of 100 matches read by hand were real "
+                                   "delivery complaints. Empty when the review has no text.",
     # products
     "category": "Product category in English (Portuguese when no translation, `unknown` when blank). On `fact_orders`, the first item's category.",
     "category_pt": "Product category in Portuguese.",

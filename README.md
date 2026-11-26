@@ -1,6 +1,6 @@
 # MGTA 457 team project: Olist marketplace
 
-**Status, 2026-11-24: ready to submit.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 24 pipeline checks pass, and all 56 results printed in the design document come back exactly from Gold. The three dashboards are published, and the design document, final documentation and presentation are in `deliverables/`. An audit on 2026-11-24 rechecked everything; see "Audit of 2026-11-24" below.
+**Status, 2026-11-26: ready to submit.** The 13 source files were checked against Kaggle and IBGE (every SHA-256 hash matches) and are loaded in `olist.raw`. Silver, Gold, the metric view and the checks are built in `olist.analytics`: all 24 pipeline checks pass, and all 56 results printed in the design document come back exactly from Gold. The three dashboards are published, and the design document, final documentation and presentation are in `deliverables/`. An audit on 2026-11-24 rechecked everything; see "Audit of 2026-11-24" below. Three extras followed on 2026-11-26: what the bad reviews say, a Genie space, and a weekly schedule with an alert; see "Extras, 2026-11-26".
 
 ## What we submit
 
@@ -8,10 +8,10 @@
 | --- | --- |
 | Dashboard design document, 2 to 5 pages with sketches and user flow | `deliverables/olist_design_document.docx` (5 pages), source `docs/design_doc.md` |
 | Databricks lakehouse: curated Unity Catalog tables | catalog `olist` (schemas `raw` and `analytics`), see "In Databricks" below |
-| SQL workflow, the transformation layer | `sql/00_setup.sql` to `sql/07_dashboard_views.sql`; files 03 to 07 also run in order as the Databricks job "Olist rebuild: Silver to dashboards". `sql/08_robustness.sql` is read-only |
+| SQL workflow, the transformation layer | `sql/00_setup.sql` to `sql/07_dashboard_views.sql`; files 03 to 07 also run in order as the Databricks job "Olist rebuild: Silver to dashboards". `sql/08_robustness.sql` and `sql/09_alert_sp_rj.sql` (the alert's query) are read-only |
 | Final project documentation | `deliverables/olist_final_documentation.docx`: overview, lineage, metric dictionary, data dictionary, data quality log, AI usage log |
-| Dashboard files: 3 dashboards, 4 pages, 24 visuals | `dashboards/*.lvdash.json`, published in Databricks AI/BI (accepted by the professor in place of Power BI) |
-| Final presentation, 10 to 15 minutes | `deliverables/olist_presentation.pptx` (12 slides, speaker notes), outline in `docs/presentation_outline.md` |
+| Dashboard files: 3 dashboards, 4 pages, 26 visuals | `dashboards/*.lvdash.json`, published in Databricks AI/BI (accepted by the professor in place of Power BI) |
+| Final presentation, 10 to 15 minutes | `deliverables/olist_presentation.pptx` (13 slides, speaker notes), outline in `docs/presentation_outline.md` |
 
 ## The data
 
@@ -31,14 +31,16 @@ Where each file came from, its license and its SHA-256 hash are in [docs/sources
 | `olist.raw` | Bronze: the 13 files as delivered, every CSV column as text. Loaded once, never edited |
 | `olist.raw.landing_zone` | The volume with the downloaded files, one folder per source |
 | `olist.analytics` | Everything we build, listed below |
-| Job "Olist rebuild: Silver to dashboards" | Runs files 03 to 07 in order, stops if a check fails, then refreshes the three dashboards. Settings in `jobs/olist_rebuild.json`, id in `jobs/job_id.json` |
+| Job "Olist rebuild: Silver to dashboards" | Runs files 03 to 07 in order, stops if a check fails, then refreshes the three dashboards. Every Monday at 6:00 Pacific time; emails the owner when a task fails. Settings in `jobs/olist_rebuild.json`, id in `jobs/job_id.json` |
+| Alert "Olist: Sao Paulo > Rio de Janeiro breaks twice the national rate" | Every Monday at 7:00, compares the route's broken-promise rate in the latest month with the national rate, and emails the owner at twice or more. Query `sql/09_alert_sp_rj.sql`, settings `jobs/alert_sp_rj.json` |
+| Genie space "Ask Olist: delivery promises" | Answers questions in plain English from `delivery_metrics`, `route_list`, `gold_states` and `gold_months`, and shows the SQL it ran. Spec `genie/ask_olist.json`, id `genie/space_id.json` |
 
 What `olist.analytics` holds:
 
 | Layer | Objects |
 | --- | --- |
 | Silver (`03_silver.sql`) | `silver_orders`, `silver_order_items`, `silver_order_payments`, `silver_order_reviews`, `silver_customers`, `silver_sellers`, `silver_products`, `silver_geolocation`, `silver_leads`, `silver_closed_deals`, `silver_states`; `quarantine` (every row set aside, with its reason); the `stg_` views that type the rows and apply the quarantine rules |
-| Gold (`04_gold.sql`) | `fact_orders` (one row per order), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures); 9 primary and 15 foreign keys declared in Unity Catalog |
+| Gold (`04_gold.sql`) | `fact_orders` (one row per order, with a flag for reviews whose text says the parcel was late or missing), `fact_order_items` (one row per item line), `dim_date`, `dim_state`, `dim_seller`, `dim_product`; `gold_months` (busy-month rule), `gold_routes` (ranked routes and fix type), `gold_states` (population measures); 9 primary and 15 foreign keys declared in Unity Catalog |
 | Metric view (`05_metric_view.sql`) | `delivery_metrics`: every rate a dashboard filter recalculates |
 | Dashboard views (`07_dashboard_views.sql`) | `route_list`, `state_view`, `region_fairness`, `deliveries_per_month`, `quarantine_summary` |
 | Checks (`06_checks.sql`) | `pipeline_checks` (24 checks; every row should say PASS, and the file's last statement fails the run if one does not), `silver_rule_counts` (rows each rule touched, for the trust page), `design_doc_numbers` (the design document's results recomputed from Gold) |
@@ -54,7 +56,7 @@ The Word and PowerPoint files are built from the markdown and scripts in this re
 | `deliverables/olist_presentation.pptx` | `tools/deck/build_deck.js`, notes in `tools/deck/script.json` | `NODE_PATH=<folder with pptxgenjs> OLIST_THEME_SCRIPT=<theme helper> node tools/deck/build_deck.js` |
 | `docs/presentation_outline.md` | `tools/deck/script.json` | `python3 tools/deck/build_outline.py` |
 
-The dashboard screenshots in `docs/img/dash_*.png` were taken from the published dashboards on 2026-11-24.
+The dashboard screenshots in `docs/img/dash_*.png` were taken from the published dashboards on 2026-11-24, except `dash_1_words.png` and `genie_answer.png`, taken on 2026-11-26.
 
 Two paths depend on the machine: `NODE_PATH` must point at a folder where `pptxgenjs` is installed, and the deck's colour theme comes from a helper outside this repository (set `OLIST_THEME_SCRIPT` to it; without it the deck is written without the theme step).
 
@@ -72,13 +74,14 @@ Run each SQL file in the Databricks SQL editor, in order, or from this folder wi
 8. `sql/06_checks.sql`: the audit. Do not build or refresh a dashboard unless every row of `pipeline_checks` says PASS.
 9. `sql/07_dashboard_views.sql`: the small views the dashboards read besides the metric view.
 10. `python3 dashboards/build_dashboards.py`, then `python3 tools/deploy_dashboards.py`: writes the three `.lvdash.json` files, then creates or updates and publishes the dashboards (ids in `dashboards/dash_ids.json`). A teammate can instead import the `.lvdash.json` files into their own workspace.
-11. `sql/08_robustness.sql`: read-only. Asks whether Sao Paulo to Rio's excess survives an adjustment for what it sells and when, and whether customers whose promise broke come back less; each query lists the value we expect.
+11. `sql/08_robustness.sql`: read-only. Asks whether Sao Paulo to Rio's excess survives an adjustment for what it sells and when, whether customers whose promise broke come back less, and how good the review word list is (two samples to read by hand); each query lists the value we expect.
+12. `python3 tools/deploy_genie.py --eval`: creates or updates the Genie space from `genie/ask_olist.json`, then asks it every benchmark question and prints whether each answer matched the benchmark SQL.
 
-Steps 5 to 9 and the dashboard refresh also run as one Databricks job: `python3 tools/deploy_job.py --run` copies files 03 to 07 to the workspace folder `mgta457-olist/sql`, creates or updates the job and runs it, printing each task's result. The job stops before the dashboard views if any check fails. It has no schedule, because the data does not change.
+Steps 5 to 9 and the dashboard refresh also run as one Databricks job: `python3 tools/deploy_job.py --run` copies files 03 to 07 to the workspace folder `mgta457-olist/sql`, creates or updates the job and the alert, and runs the job, printing each task's result. The job stops before the dashboard views if any check fails. It runs every Monday at 6:00 Pacific time, as a monthly refresh of new data would, and emails the owner when a task fails. The alert runs its query, `sql/09_alert_sp_rj.sql`, every Monday at 7:00.
 
 ## Dashboards
 
-Published in the Databricks workspace on 2026-11-24 and checked page by page in the browser:
+Published in the Databricks workspace on 2026-11-24 and checked page by page in the browser (Dashboard 1 republished on 2026-11-26 with two new cards):
 
 | Dashboard | Reader | Pages |
 | --- | --- | --- |
@@ -86,7 +89,7 @@ Published in the Databricks workspace on 2026-11-24 and checked page by page in 
 | Olist 2 - Where promises break | Head of Logistics | 2: the routes, and "Can we trust it" |
 | Olist 3 - Where local sellers would help | Head of Seller Acquisition | 1 |
 
-They read only the metric view `delivery_metrics`, the views of `07_dashboard_views.sql` and two check views, so they do no calculation. Colour works the same way on every page: gray is context, red sets broken promises against kept or later ones, and blue marks what a chart's note talks about; the tables colour only the fix type and the check results. Every headline card sits next to its comparison. Published dashboards show cached results until someone clicks refresh. Only AJ's account and the workspace admins can open them: share them from the dashboard's Share button, or import the `.lvdash.json` files into another workspace.
+They read only the metric view `delivery_metrics`, the views of `07_dashboard_views.sql` and two check views, so they do no calculation. Colour works the same way on every page: gray is context, red sets broken promises against kept or later ones, and blue marks what a chart's note talks about; the tables colour only the fix type and the check results. Every headline card sits next to its comparison. Published dashboards show cached results until someone clicks refresh. AJ, Ruby and Merna can open and edit them; anyone else must first be added to the workspace and then shared from the dashboard's Share button, or can import the `.lvdash.json` files into another workspace.
 
 ## Design document numbers
 
@@ -108,8 +111,18 @@ Four changes followed the audit. None moves a number: all 24 checks pass and all
 
 - **Keys.** The Gold tables declare 9 primary and 15 foreign keys in Unity Catalog, so Catalog Explorer draws the star schema. Unity Catalog does not enforce declared keys, so checks 10, 12 and 14 test them on every build, and check 14 also confirms that all 24 are declared.
 - **A gate and a job.** `06_checks.sql` ends with a statement that fails the run when any check is not PASS, and the Databricks job runs files 03 to 07 and refreshes the dashboards only after it passes.
-- **Dashboards.** Colour used the same way on every page, and a comparison next to every headline card: the average review of kept and broken promises (4.29 and 2.18), the scores of late orders reviewed before and after arrival (1.65 and 3.72), and the share of on-time deliveries handed over on time (92.3%, next to 72.2% for late ones). One new measure (`share_kept_handed_over_by_deadline`) and one label column (`state_view.highlight`) serve them; the dashboards now hold 24 visuals.
+- **Dashboards.** Colour used the same way on every page, and a comparison next to every headline card: the average review of kept and broken promises (4.29 and 2.18), the scores of late orders reviewed before and after arrival (1.65 and 3.72), and the share of on-time deliveries handed over on time (92.3%, next to 72.2% for late ones). One new measure (`share_kept_handed_over_by_deadline`) and one label column (`state_view.highlight`) serve them; the dashboards then held 24 visuals.
 - **Robustness.** `sql/08_robustness.sql` answers two likely questions. Adjusting for what a route sells and when it sells moves Sao Paulo to Rio's excess only from 678 to 660, so it stays first (a new row in the metric dictionary's sensitivity table). Customers whose first promise broke came back within 180 days at 1.3% against 1.7%, but the whole gap sits in the Southeast, so the dashboards do not claim a cost in repeat business.
+
+## Extras, 2026-11-26
+
+Three additions. All 24 checks still pass and all 56 design-document numbers match; the only change to an existing table is two new columns on `fact_orders`.
+
+- **What the bad reviews say.** `fact_orders` flags each latest review whose title or comment says the parcel was late, slow or missing, by a Portuguese word list written out in `04_gold.sql`. Of the 1-2 star reviews that have text, 66.4% on broken promises say so, against 19.1% on kept ones: two new cards on Dashboard 1, served by four new measures. We read 100 flagged reviews drawn at random and 95 were real delivery complaints; 18 of 30 unflagged broken-promise reviews were delivery complaints too, so the list undercounts (`sql/08_robustness.sql`, query 3).
+- **Ask Olist, a Genie space.** Questions in plain English, answered from the metric view and three small tables, with our definitions as instructions and six trusted example queries. Its 11 benchmark questions all came back right, after one fix to how it states percentages (`python3 tools/deploy_genie.py --eval`).
+- **A weekly schedule and an alert.** The job runs every Monday at 6:00 Pacific time and emails the owner when a task fails. At 7:00 an alert compares Sao Paulo to Rio's broken-promise rate in the latest month with the national rate, and fires at twice or more, the same yardstick as the busy-month rule. It would have fired for orders bought from November 2017 to March 2018, and reads 0.87 for August 2018. We made it evaluate once on the real rule (OK) and once on a lowered one (triggered) before setting it to weekly.
+
+Ruby and Merna can edit the dashboards, the Genie space and the alert, run the job, and read the `olist` data.
 
 ## What the profile found
 

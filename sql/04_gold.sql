@@ -20,7 +20,9 @@
 --           Revised with Claude, 2026-11-24, after an audit: routes under
 --           100 orders get no fix type, the flags can never be
 --           empty (see docs/ai_usage.md). Revised with Claude,
---           2026-11-24: the keys of section 10 declared.
+--           2026-11-24: the keys of section 10 declared. Revised with
+--           Claude, 2026-11-26: fact_orders flags reviews whose text
+--           says the parcel was late, slow or missing.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -159,7 +161,11 @@ first_item AS (
   WHERE i.order_item_id = 1
 ),
 review AS (
-  SELECT order_id, review_id, review_score, review_creation_date, review_answer_ts
+  -- review_text: the title and the comment as one lower-case text,
+  -- empty when both are blank. Only the two flags made from it in
+  -- base reach fact_orders; the text itself stays in Silver.
+  SELECT order_id, review_id, review_score, review_creation_date, review_answer_ts,
+         NULLIF(trim(lower(concat_ws(' ', review_comment_title, review_comment_message))), '') AS review_text
   FROM olist.analytics.silver_order_reviews
   WHERE is_latest_for_order
 ),
@@ -190,6 +196,30 @@ base AS (
     r.review_score,
     r.review_creation_date,
     r.review_answer_ts,
+    -- Dashboard 1, the two cards on what 1-2 star reviews say: does the
+    -- latest review have a title or comment, and does it say the parcel
+    -- was late, slow or missing? The words are Portuguese:
+    --   atras...                    atraso, atrasado: late
+    --   demor...                    demora, demorou: slow
+    --   não ... receb, cheg, entreg not received, did not arrive, not
+    --                               delivered (one short word may sit
+    --                               between, as in não foi entregue)
+    --   nunca chegou, nunca recebi  never arrived, never received
+    --   extravi...                  extraviado: lost in transit
+    --   fora do prazo, passou do prazo, prazo venceu...: past the deadline
+    -- "prazo" alone is not used: "dentro do prazo" means on time. We read
+    -- 100 matches drawn at random and 95 were real delivery complaints;
+    -- the list also misses some (sql/08_robustness.sql, query 3).
+    -- review_says_late_or_missing is empty when there is no text.
+    r.review_text IS NOT NULL                      AS has_review_text,
+    r.review_text RLIKE concat(
+      'atras|demor',
+      '|n[ãa]o (o |a |os |as |me |foi |foram |tinha |tenho |ter |havia )?(receb|cheg|entreg)',
+      '|nunca (me )?(cheg|receb)',
+      '|extravi',
+      '|(fora|passou|ap[óo]s|depois|al[ée]m) d[oe] prazo',
+      '|prazo (de entrega )?(j[áa] )?(passou|venceu|expirou|estourou|esgotou)'
+    )                                              AS review_says_late_or_missing,
     o.flag_several_sellers,
     o.flag_delivered_without_date,
     o.flag_canceled_with_delivery,

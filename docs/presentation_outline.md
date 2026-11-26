@@ -1,23 +1,24 @@
 # Presentation outline
 
-The talk for `deliverables/olist_presentation.pptx`: 12 slides, about 14.25 minutes, within the 10 to 15 the syllabus asks. The same text is in each slide's speaker notes; both come from `tools/deck/script.json`. The speaker split is a suggestion.
+The talk for `deliverables/olist_presentation.pptx`: 13 slides, about 14.75 minutes, within the 10 to 15 the syllabus asks. The same text is in each slide's speaker notes; both come from `tools/deck/script.json`. The speaker split is a suggestion.
 
 | Slide | Title | Speaker | Minutes |
 | ---: | --- | --- | ---: |
 | 1 | Where Olist breaks its delivery promise, and what to fix first | AJ | 0.75 |
-| 2 | One promise, three datasets | AJ | 1.0 |
+| 2 | One promise, three datasets | AJ | 0.75 |
 | 3 | From 13 files to three dashboards | Ruby | 1.25 |
-| 4 | Four traps the data set for us | Ruby | 1.5 |
-| 5 | Broken promises draw a third of the bad reviews | Merna | 1.5 |
+| 4 | Four traps the data set for us | Ruby | 1.25 |
+| 5 | Broken promises draw a third of the bad reviews | Merna | 1.75 |
 | 6 | One route breaks more promises than the next nine together | AJ | 1.5 |
 | 7 | Two kinds of fix, and a promise 3 days later is not one | AJ | 1.5 |
 | 8 | Rio: high demand, few sellers per resident | Merna | 1.5 |
 | 9 | Can we trust it? Every check is on the dashboard | Ruby | 1.25 |
-| 10 | Declared keys, and a rebuild that stops on a failed check | Ruby | 0.75 |
-| 11 | What Olist should do next | AJ | 1.0 |
-| 12 | What the data cannot tell us | Merna | 0.75 |
+| 10 | A pipeline Olist could run every week | Ruby | 1.0 |
+| 11 | Ask Olist: plain-English questions, tested answers | Merna | 0.5 |
+| 12 | What Olist should do next | AJ | 1.0 |
+| 13 | What the data cannot tell us | Merna | 0.75 |
 
-Total: 14.25 minutes. AJ 5.75, Ruby 4.75, Merna 3.75.
+Total: 14.75 minutes. AJ 5.5, Ruby 4.75, Merna 4.5.
 
 ## 1. Where Olist breaks its delivery promise, and what to fix first
 
@@ -25,7 +26,7 @@ Total: 14.25 minutes. AJ 5.75, Ruby 4.75, Merna 3.75.
 
 ## 2. One promise, three datasets
 
-**AJ, 1.0 min.** We combined three datasets from two publishers: about one hundred thousand Olist marketplace orders from 2016 to 2018, Olist's marketing funnel of sellers who asked to join, and IBGE, Brazil's statistics office, for the population of each state. We judge a promise only once its day has passed inside the data, which leaves 95,901 orders. 8.6 percent of them broke their promise.
+**AJ, 0.75 min.** We combined three datasets from two publishers: about one hundred thousand Olist marketplace orders from 2016 to 2018, Olist's marketing funnel of sellers who asked to join, and IBGE, Brazil's statistics office, for the population of each state. We judge a promise only once its day has passed inside the data, which leaves 95,901 orders. 8.6 percent of them broke their promise.
 
 ## 3. From 13 files to three dashboards
 
@@ -33,11 +34,11 @@ Total: 14.25 minutes. AJ 5.75, Ruby 4.75, Merna 3.75.
 
 ## 4. Four traps the data set for us
 
-**Ruby, 1.5 min.** Four problems would have changed our answer. First, the promised date has no time of day, so comparing timestamps calls 1,292 on-time deliveries late; we compare days. Second, joins on the wrong grain: items joined to payments add 4.6 percent to item value, and customers joined to locations turn 99 thousand rows into 15 million. Third, 547 orders have more than one review; we keep the latest, so no order is counted twice. Fourth, deliveries stop being recorded after August 2018, so a promise made for September would look broken. We stop the window at August 31.
+**Ruby, 1.25 min.** Four problems would have changed our answer. First, the promised date has no time of day, so comparing timestamps calls 1,292 on-time deliveries late; we compare days. Second, joins on the wrong grain: items joined to payments add 4.6 percent to item value, and customers joined to locations turn 99 thousand rows into 15 million. Third, 547 orders have more than one review; we keep the latest, so no order is counted twice. Fourth, deliveries stop being recorded after August 2018, so a promise made for September would look broken. We stop the window at August 31.
 
 ## 5. Broken promises draw a third of the bad reviews
 
-**Merna, 1.5 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of the orders we judge broke their promise, but they make up 36.7 percent of the orders in our window with a one or two star review, canceled ones included. On average a kept promise earns 4.29 stars and a broken one 2.18. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders delivered in the same week: the late ones score lower in every band, so customers react to the broken promise, not only to speed. And 70 percent of the late parcels with a review were reviewed before they arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
+**Merna, 1.75 min.** Dashboard 1 is for the Head of Customer Experience. 8.6 percent of the orders we judge broke their promise, but they make up 36.7 percent of the orders in our window with a one or two star review, canceled ones included. On average a kept promise earns 4.29 stars and a broken one 2.18. The chart on the left shows the score holding while parcels arrive early and falling right after the promised day. The chart on the right compares orders delivered in the same week: the late ones score lower in every band, so customers react to the broken promise, not only to speed. Their own words say the same: in the one and two star reviews that have text, 66 percent of those on broken promises say the parcel was late or never came, against 19 percent on kept ones. And 70 percent of the late parcels with a review were reviewed before they arrived, at 1.65 stars. These are correlations, but they point at a cheap test: tell the customer about the delay before the review survey goes out.
 
 ## 6. One route breaks more promises than the next nine together
 
@@ -55,14 +56,18 @@ Total: 14.25 minutes. AJ 5.75, Ruby 4.75, Merna 3.75.
 
 **Ruby, 1.25 min.** Dashboard 2 has a second page, Can we trust it. Twenty-four pipeline checks run on every build: every order, item, payment and review row lands in Silver or in quarantine, every key holds, no join inflates money, the stored rates agree with the metric view, and the days are the days written in the files. All pass. Only 3 of 415 thousand order, item, payment and review rows were set aside. A view recomputes all 56 results printed in our design document from Gold, and all match. The same page shows the fairness check: Northeast customers get worse service, 15.6 against 7.8 percent, and we show that gap with its margin instead of hiding it.
 
-## 10. Declared keys, and a rebuild that stops on a failed check
+## 10. A pipeline Olist could run every week
 
-**Ruby, 0.75 min.** Two things make this a pipeline Olist could run every month. First, the star schema is declared, not just described: Unity Catalog holds nine primary keys and fifteen foreign keys, and Databricks draws this diagram from them. It does not enforce them, so our checks test on every build that every foreign key finds its row. Second, one Databricks job runs the whole rebuild, from Silver to the dashboard views, and then refreshes the three dashboards. The checks end in a gate: if any of the 24 fails, the job stops before the dashboard views and the refresh, so the published dashboards keep their last good results until someone refreshes them by hand.
+**Ruby, 1.0 min.** This is a pipeline Olist could run every week. The star schema is declared, not just described: Unity Catalog holds nine primary and fifteen foreign keys, and because Databricks does not enforce them, our checks test them on every build. One job rebuilds everything from Silver to the dashboard views every Monday morning, then refreshes the three dashboards. The checks end in a gate: if any of the 24 fails, the job stops before the refresh and emails us, so the published dashboards keep their last good results until someone refreshes them by hand. And an alert watches Sao Paulo to Rio: every Monday it checks whether the route breaks twice the national rate. Looking back, it would have fired from November 2017 to March 2018; today it reads 0.87.
 
-## 11. What Olist should do next
+## 11. Ask Olist: plain-English questions, tested answers
+
+**Merna, 0.5 min.** Managers will have questions we did not chart. Ask Olist, our Genie space, answers them in plain English from the same metric view as the dashboards, and shows the SQL it ran. We tested it on eleven questions with known answers; after one fix to its instructions, it got all eleven right. Here it compares Rio with Sao Paulo, the gap behind Dashboard 3.
+
+## 12. What Olist should do next
 
 **AJ, 1.0 min.** Three actions, one per reader. Customer Experience: test a delay notice with a new date, sent before the review survey to customers whose parcel will miss. Logistics: review the carrier and transit days on Sao Paulo to Rio first, and book extra capacity before the busy months. Seller Acquisition: run a measured recruiting pilot in Rio, and check whether local sellers really deliver faster for the same products.
 
-## 12. What the data cannot tell us
+## 13. What the data cannot tell us
 
 **Merna, 0.75 min.** Four limits. The links between promises and reviews are correlations. The data has no carrier name or tracking, so why Sao Paulo to Rio breaks is a question for Olist's carriers. We found the busy months in the same data, so that rule must be checked on new months. And deliveries stop being recorded after August 2018, so we deliver a pipeline a monthly refresh would rerun, not a list for today. Thank you; we are happy to take questions.

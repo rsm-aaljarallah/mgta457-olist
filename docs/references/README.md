@@ -16,6 +16,7 @@ Each chart shows one relationship, in a familiar chart type.
 | 1 | Broken promises, low reviews, reviewed before arrival | Magnitude, the big picture first | Cards |
 | 1 | Review score by days before or after the promised day | Deviation from the promised day | Bar |
 | 1 | On time vs late, same delivery week | Magnitude, side by side on one baseline | Clustered bar |
+| 1 | What the 1-2 star reviews say, kept against broken | Magnitude, the two side by side | Cards, with the word list next to them |
 | 2 | Routes to fix first | Ranking | Table, because the reader needs names and reasons |
 | 2 | Broken-promise rate by month and area | Time | Line: a rate, and six areas compared on one baseline |
 | 2 | Now vs a promise 3 days later, by region | Magnitude | Clustered bar |

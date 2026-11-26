@@ -8,7 +8,8 @@
 // Screenshots come from docs/img (taken from the published dashboards on 2026-11-24).
 // AI use: drafted with Claude (Anthropic), 2026-11-24, from the Chord project's deck script
 // (see docs/ai_usage.md). Revised with Claude, 2026-11-24: slide 10 (declared keys and the
-// rebuild job) and the comparisons on slides 5 and 7.
+// rebuild job) and the comparisons on slides 5 and 7. Revised with Claude, 2026-11-26: what the
+// reviews say on slide 5, the weekly job and the alert on slide 10, and the Genie space on slide 11.
 const fs = require("fs");
 const path = require("path");
 const pptxgen = require("pptxgenjs");
@@ -142,14 +143,16 @@ s = content(4, "How we built it");
 // ---------------------------------------------------------------- 5 dashboard 1
 pres.addSection({ title: "What we found" });
 s = content(5, "What we found");
-shot(s, "dash_1_cost.png", 0.6, 1.35, 8.2, 5.5, "Dashboard 1 screenshot");
+const d1 = shot(s, "dash_1_cost.png", 0.6, 1.35, 8.2, 4.4, "Dashboard 1 screenshot");
+shot(s, "dash_1_words.png", 0.6, 1.35 + d1.h + 0.15, d1.w, 6.85 - (1.35 + d1.h + 0.15), "Dashboard 1, what the 1-2 star reviews say");
 points(s, [
   "8.6% of judged orders, but 36.7% of in-window orders with a 1-2 star review, canceled ones included",
   "Average review: 4.29 when the promise held, 2.18 when it broke",
   "The score holds while parcels arrive early, then drops right after the promised day: 4.03 on the day, 2.10 at 4-7 days late",
   "In the same delivery week, late orders score 0.4 to 1.8 stars lower",
   "70.1% of late parcels with a review were reviewed before arrival: 1.65 stars, against 3.72 after",
-], 9.1, 1.5, 3.7, 5.2, 15);
+  "In their own words: 66.4% of 1-2 star reviews with text on broken promises say late or missing, against 19.1% on kept ones",
+], 8.6, 1.5, 4.2, 5.3, 14);
 
 // ---------------------------------------------------------------- 6 routes
 s = content(6, "What we found");
@@ -192,15 +195,25 @@ s = content(10, "Can we trust it");
 shot(s, "star_schema.png", 0.6, 1.35, 4.3, 5.45, "Star schema drawn by Catalog Explorer from the declared keys");
 shot(s, "job_run.png", 5.3, 1.35, 7.4, 2.2, "A run of the rebuild job, every task succeeded");
 points(s, [
-  "9 primary and 15 foreign keys declared in Unity Catalog, so Databricks draws the star schema itself",
-  "Unity Catalog does not enforce declared keys, so our checks test them on every build",
-  "One job runs Silver, Gold, the metric view, the checks and the dashboard views, then refreshes the three dashboards",
-  "The checks end in a gate: if any of the 24 fails, the job stops before the dashboard views and the refresh",
-], 5.3, 3.5, 7.4, 3.2, 16);
+  "9 primary and 15 foreign keys declared in Unity Catalog, so Databricks draws the star schema itself; our checks test them on every build",
+  "Every Monday at 6:00 one job rebuilds Silver to the dashboard views, then refreshes the three dashboards",
+  "The checks end in a gate: if any of the 24 fails, the job stops before the refresh and emails us",
+  "An alert checks every Monday whether Sao Paulo to Rio breaks twice the national rate: it would have fired from Nov 2017 to Mar 2018; today it reads 0.87",
+], 5.3, 3.5, 7.4, 3.3, 16);
 
-// ---------------------------------------------------------------- 11 recommendations
+// ---------------------------------------------------------------- 11 Genie
+s = content(11, "Can we trust it");
+shot(s, "genie_answer.png", 0.6, 1.35, 8.2, 5.5, "The Ask Olist Genie space answering a question");
+stat(s, 9.1, 1.5, 3.6, "11 / 11", "benchmark questions answered correctly, after one fix to the instructions", "Benchmarks", "00A972");
+points(s, [
+  "Answers from the same metric view as the dashboards, and shows the SQL it ran",
+  "Its instructions hold our definitions: judged, broken, route, busy month",
+  "Try it: “Which routes should we fix first?”",
+], 9.1, 3.35, 3.6, 3.4, 15);
+
+// ---------------------------------------------------------------- 12 recommendations
 pres.addSection({ title: "What to do" });
-s = content(11, "What to do");
+s = content(12, "What to do");
 [
   ["Customer Experience", "Test a delay notice", "Send a new date before the review survey to customers whose parcel will miss. Measure the score against a control group."],
   ["Logistics", "Fix Sao Paulo to Rio first", "Review its carrier and transit days, and book extra capacity before busy months. Then the Northeast routes with a lasting-fix label."],
@@ -215,10 +228,10 @@ s = content(11, "What to do");
 s.addText("How we will know: the score of late orders (Dashboard 1), the rate on each fixed route (Dashboard 2), and the local share of Rio's orders (Dashboard 3). The same pipeline reruns on new months.",
   { x: 0.6, y: 5.45, w: 12.1, h: 0.9, fontSize: 16, italic: true, color: C.text2, margin: 0, valign: "top", isTextBox: true, objectName: "How we will know" });
 
-// ---------------------------------------------------------------- 12 limits and close
+// ---------------------------------------------------------------- 13 limits and close
 s = pres.addSlide({ masterName: "DARK", sectionTitle: "What to do" });
-s.addText(SCRIPT[11].title, { placeholder: "title" });
+s.addText(SCRIPT[12].title, { placeholder: "title" });
 s.addText("Promise and review links are correlations  ·  no carrier or tracking data  ·  busy months found in the same data  ·  deliveries recorded only to August 2018\n\nQuestions?", { placeholder: "body" });
-s.addNotes(say(12));
+s.addNotes(say(13));
 
 pres.writeFile({ fileName: OUT }).then(() => (applyTheme ? applyTheme(OUT, THEME) : null)).then(() => console.log("wrote", OUT));

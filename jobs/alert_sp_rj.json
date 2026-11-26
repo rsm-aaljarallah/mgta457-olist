@@ -1,0 +1,15 @@
+{
+  "display_name": "Olist: Sao Paulo > Rio de Janeiro breaks twice the national rate",
+  "query_file": "sql/09_alert_sp_rj.sql",
+  "warehouse_id": "${WAREHOUSE}",
+  "evaluation": {
+    "source": {"name": "times_national_rate"},
+    "comparison_operator": "GREATER_THAN_OR_EQUAL",
+    "threshold": {"value": {"double_value": 2.0}},
+    "empty_result_state": "OK",
+    "notification": {"notify_on_ok": false, "subscriptions": [{"user_email": "${OWNER_EMAIL}"}]}
+  },
+  "schedule": {"quartz_cron_schedule": "0 0 7 ? * MON", "timezone_id": "America/Los_Angeles", "pause_status": "UNPAUSED"},
+  "custom_summary": "Olist: Sao Paulo > Rio de Janeiro broke at least twice the national rate of delivery promises in the latest month",
+  "custom_description": "The route's fix type and first step are in olist.analytics.route_list and on Dashboard 2. The query is sql/09_alert_sp_rj.sql in the project repository."
+}

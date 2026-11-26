@@ -35,6 +35,8 @@ Table. Gold fact. One row per order: promise, delivery, broken-promise outcome, 
 | `review_score` | int | Stars, 1 to 5. On `fact_orders`, the order's latest review. |
 | `review_creation_date` | date | Day the review survey was sent. |
 | `review_answer_ts` | timestamp | When the customer answered the review. |
+| `has_review_text` | boolean | The latest review has a title or a comment. |
+| `review_says_late_or_missing` | boolean | The latest review's title or comment says the parcel was late, slow or missing, by a Portuguese word list (`04_gold.sql`); 95 of 100 matches read by hand were real delivery complaints. Empty when the review has no text. |
 | `flag_several_sellers` | boolean | Rule 13: items from two or more sellers, so the one carrier date cannot be credited to a seller. |
 | `flag_delivered_without_date` | boolean | Rule 4: status delivered but no delivery date. |
 | `flag_canceled_with_delivery` | boolean | Rule 5: canceled but has a delivery date. |
@@ -241,6 +243,10 @@ Metric view. Olist delivery-promise metrics. Grain of the source: one row per or
 | `avg_review_score` | double | Average latest review score of judged orders |
 | `avg_score_kept` | double | Average latest review score of judged orders that kept their promise |
 | `avg_score_broken` | double | Average latest review score of broken promises |
+| `low_reviews_with_text` | bigint | Judged orders whose latest review gives 1 or 2 stars and has a title or comment |
+| `share_low_reviews_late_or_missing` | double | Of those, the share whose title or comment says the parcel was late, slow or missing (Portuguese word list in 04_gold.sql). Group by promise_outcome to compare kept and broken promises |
+| `share_low_reviews_late_or_missing_kept` | double | The same share for kept promises |
+| `share_low_reviews_late_or_missing_broken` | double | The same share for broken promises |
 | `share_late_reviewed_before_arrival` | double | Of delivered broken promises with a review, the share answered before the parcel arrived (answer time before delivery time) |
 | `avg_score_late_before_arrival` | double | Average score of late orders reviewed before arrival |
 | `avg_score_late_after_arrival` | double | Average score of late orders reviewed after arrival |

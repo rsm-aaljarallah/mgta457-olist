@@ -10,9 +10,13 @@
 --                sensitivity table)
 --             2. Do customers whose promise broke come back less?
 --                Tested, and not claimed on any dashboard.
+--             3. How good is the word list behind the two cards on
+--                Dashboard 1 that say what 1-2 star reviews complain
+--                about? Two samples to read by hand.
 -- Run:      After 07_dashboard_views.sql, any time. Safe to rerun.
 -- AI use:   Drafted with Claude (Anthropic), 2026-11-24
---           (see docs/ai_usage.md).
+--           (see docs/ai_usage.md). Query 3 added with Claude,
+--           2026-11-26.
 --           Reviewed and understood by: TODO name
 -- ============================================================
 
@@ -108,3 +112,48 @@ SELECT COALESCE(region, 'All') AS region,
 FROM rep
 GROUP BY GROUPING SETS ((is_broken), (region, is_broken))
 ORDER BY region, first_promise DESC;
+
+-- ------------------------------------------------------------
+-- 3. The word list behind review_says_late_or_missing (04_gold.sql),
+--    which feeds Dashboard 1's two cards on what 1-2 star reviews
+--    say. Base: judged orders whose latest review gives 1 or 2 stars
+--    and has a title or comment. Each sample has a fixed random
+--    order, so anyone can draw the same reviews again and read them.
+--    3a. 100 reviews the list flags. We read all of them on
+--        2026-11-26: 95 complain of a late, slow or missing parcel
+--        (70 of the 72 broken promises, 25 of the 28 kept ones). The
+--        five that do not: slow customer service, a slow exchange, a
+--        refund and a cancellation that got no answer ("não recebi"
+--        a reply), and a wrong item.
+--    3b. 30 reviews of broken promises the list does not flag. 18 of
+--        them complain of a late or missing parcel in other words
+--        ("nem recebi", "passou o prazo", "não respeitou o prazo",
+--        "aguardando produto", or a typo such as "ñão"). So the list
+--        undercounts: read the shares on Dashboard 1 (66.4% of broken
+--        promises, 19.1% of kept ones) as a floor.
+--    We kept the list as it was when we read 3a, rather than add the
+--    missed words, so that 95 out of 100 still describes it.
+-- ------------------------------------------------------------
+WITH r AS (
+  SELECT f.order_id, f.is_broken, f.review_says_late_or_missing,
+         regexp_replace(lower(concat_ws(' ', s.review_comment_title, s.review_comment_message)),
+                        '[\\r\\n]+', ' ') AS review_text
+  FROM olist.analytics.fact_orders AS f
+  JOIN olist.analytics.silver_order_reviews AS s
+    ON s.review_id = f.review_id AND s.order_id = f.order_id
+  WHERE f.is_judged AND f.is_low_review = 1 AND f.has_review_text
+),
+flagged AS (
+  SELECT ROW_NUMBER() OVER (ORDER BY xxhash64(concat('check-2026-11-26', order_id))) AS n,
+         CASE WHEN is_broken = 1 THEN 'Broken' ELSE 'Kept' END AS promise, review_text
+  FROM r WHERE review_says_late_or_missing
+),
+missed AS (
+  SELECT ROW_NUMBER() OVER (ORDER BY xxhash64(concat('miss-2026-11-26', order_id))) AS n,
+         'Broken' AS promise, review_text
+  FROM r WHERE is_broken = 1 AND NOT review_says_late_or_missing
+)
+SELECT '3a flagged' AS sample, n, promise, review_text FROM flagged WHERE n <= 100
+UNION ALL
+SELECT '3b not flagged', n, promise, review_text FROM missed WHERE n <= 30
+ORDER BY sample, n;
